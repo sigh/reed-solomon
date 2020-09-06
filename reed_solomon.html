@@ -14,7 +14,7 @@
 <body>
   <div id="codec-display">
     <span>Message</span>
-    <input id="message-input" type="text">
+    <input id="message-input" type="text" value="hello world">
 
     <span>Bytes (hex)</span>
     <span class="bytes" id="message-utf8"></span>
@@ -24,6 +24,33 @@
 
     <span>Encoded (hex)</span>
     <span class="bytes" id="message-encoded"></span>
+
+    <span>Recieved (hex)</span>
+    <span class="bytes" id="recieved-encoded"></span>
+
+    <span>Recieved</span>
+    <span class="polynomial" id="recieved-poly"></span>
+
+    <span>Syndromes</span>
+    <span class="polynomial" id="syndromes"></span>
+
+    <span>Error Locator</span>
+    <span class="polynomial" id="error-locator"></span>
+
+    <span>Error Positions</span>
+    <span id="error-positions"></span>
+
+    <span>Correction Polynomial</span>
+    <span class="polynomial" id="correction-poly"></span>
+
+    <span>Decoded Polynomial</span>
+    <span class="polynomial" id="decoded-poly"></span>
+
+    <span>Decoded Bytes</span>
+    <span class="bytes" id="decoded-utf8"></span>
+
+    <span>Decoded Message</span>
+    <span id="decoded-message"></span>
   </div>
 </body>
 
