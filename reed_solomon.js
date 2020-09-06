@@ -1,5 +1,6 @@
 // Mostly following the implementation in
 // https://en.wikiversity.org/wiki/Reed%E2%80%93Solomon_codes_for_coders
+
 class GF2_8 {
   static PRIM = 0x11d;
   static CHARACTERISTIC = 0x100;
@@ -28,12 +29,13 @@ class GF2_8 {
     return this.EXP[(this.LOG[x] + this.SIZE - this.LOG[y])%this.SIZE];
   }
 
-  static pow(x, power) {
-    return this.EXP[(this.LOG[x] * power)%this.SIZE];
+  static pow(x, p) {
+    return this.EXP[(this.LOG[x] * p)%this.SIZE];
   }
 
   // Calculate lookup tables.
 
+  // EXP[i] = GENERATOR^i.
   static EXP = (() => {
     let exp = new Uint8Array(this.SIZE);
 
@@ -46,6 +48,7 @@ class GF2_8 {
     return exp;
   })();
 
+  // LOG[GENERATOR^i] = i. Inverse of EXP.
   static LOG = (() => {
     let log = new Uint8Array(this.CHARACTERISTIC);
     for (let i = 0; i < this.CHARACTERISTIC; i++) {
@@ -56,6 +59,7 @@ class GF2_8 {
 
   // Polynomial functions.
 
+  // Evaluates p(x)
   static polyEval(p, x) {
     let y = p[0];
     for (let i = 1; i < p.length; i++) {
@@ -64,10 +68,12 @@ class GF2_8 {
     return y;
   }
 
+  // x*p where x is a scalar in GF2_8.
   static polyScale(p, x) {
     return p.map(a => this.mul(a, x));
   }
 
+  // p+q
   static polyAdd(p, q) {
     let r = new Uint8Array(Math.max(p.length, q.length));
     for (let i = 0; i < p.length; i++) {
@@ -79,6 +85,7 @@ class GF2_8 {
     return r;
   }
 
+  // p*q
   static polyMul(p, q) {
     let r = new Uint8Array(p.length + q.length - 1);
     for (let j = 0; j < q.length; j++) {
@@ -89,6 +96,16 @@ class GF2_8 {
     return r;
   }
 
+  // The coefficient of x^a of p*q
+  static polyMulAt(p, q, a) {
+    let result = 0;
+    for (let i = 0; i < p.length; i++) {
+      result ^= GF2_8.mul(p[p.length-i-1], q[a-i] || 0);
+    }
+    return result;
+  }
+
+  // p/q
   static polyDiv(p, q) {
     let r = new Uint8Array(p);
     let resultLen = p.length - q.length + 1;
@@ -132,12 +149,10 @@ class ReedSolomon {
     return new Uint8Array([...msg, ...q]);
   }
 
-  SYND_SHIFT = 1;
-
   syndromes(msg) {
-    let synd = new Uint8Array(this._nsym + this.SYND_SHIFT);
+    let synd = new Uint8Array(this._nsym);
     for (let i = 0; i < this._nsym; i++) {
-      synd[i+this.SYND_SHIFT] = GF2_8.polyEval(msg, GF2_8.EXP[i])
+      synd[i] = GF2_8.polyEval(msg, GF2_8.EXP[i])
     }
     return synd;
   }
@@ -147,23 +162,16 @@ class ReedSolomon {
     let oldLoc = [1];
 
     for (let i = 0; i < this._nsym; i++) {
-      const k = i + this.SYND_SHIFT;
-      let delta = synd[k];
-      // TODO: Replace with polyMulAt(reverse(errLoc), synd, k)
-      for (let j = 1; j < errLoc.length; j++) {
-        delta = GF2_8.add(
-          delta,
-          GF2_8.mul(errLoc[errLoc.length-j-1], synd[k-j]));
-      }
+      let delta = GF2_8.polyMulAt(errLoc, synd, i);
 
       // Multiply by x.
       oldLoc = [...oldLoc, 0];
 
       if (delta !== 0) {
         if (oldLoc.length > errLoc.length) {
-            let newLoc = GF2_8.polyScale(oldLoc, delta)
+            let newLoc = GF2_8.polyScale(oldLoc, delta);
             oldLoc = GF2_8.polyScale(errLoc, GF2_8.div(1, delta));
-            errLoc = newLoc
+            errLoc = newLoc;
         }
         errLoc = GF2_8.polyAdd(errLoc, GF2_8.polyScale(oldLoc, delta));
       }
@@ -184,42 +192,37 @@ class ReedSolomon {
   }
 
   errorEvaluator(synd, errLoc) {
-    let revSynd = [...synd].reverse();
+    let revSynd = [0, ...synd].reverse();
     let mul = GF2_8.polyMul(revSynd, errLoc);
     let result = mul.subarray(mul.length - this._nsym - 1);
     return result;
   }
 
-  errorCorrection(msg, synd, errLoc, errPos) {
-    let coefPos = errPos;
+  errorCorrection(synd, errLoc, errPos) {
     let errEval = this.errorEvaluator(synd, errLoc);
+    let correction = new Uint8Array(Math.max(...errPos)+1);
 
-    let x = [];
-    for (const pos of coefPos) {
-      let l = GF2_8.SIZE - pos;
-      x.push(GF2_8.div(1, GF2_8.EXP[l]));
-    }
+    for (const pos of errPos) {
+      let expPos = GF2_8.EXP[pos];
 
-    // TODO: Don't need msg.
-    let e = new Uint8Array(msg.length);
-    for (let i = 0; i < x.length; i++) {
       let errLocPrimeTmp = []
-      for (let j = 0; j < x.length; j++) {
-        if (j !== i) {
-          errLocPrimeTmp.push(GF2_8.sub(1, GF2_8.div(x[j], x[i])));
+      for (const pos1 of errPos) {
+        if (pos1 !== pos) {
+          errLocPrimeTmp.push(
+            GF2_8.sub(1, GF2_8.div(GF2_8.EXP[pos1], expPos)));
         }
       }
 
-      let errLocPrime = errLocPrimeTmp.reduce(GF2_8.mul.bind(GF2_8), 1);
+      let errLocPrime = errLocPrimeTmp.reduce((a, b) => GF2_8.mul(a, b), 1);
 
-      let y = GF2_8.polyEval(errEval, GF2_8.div(1, x[i]));
-      y = GF2_8.mul(x[i], y)
+      let y = GF2_8.polyEval(errEval, GF2_8.div(1, expPos));
+      y = GF2_8.mul(expPos, y)
 
       let magnitude = GF2_8.div(y, errLocPrime);
-      e[msg.length-errPos[i]-1] = magnitude;
+      correction[correction.length-pos-1] = magnitude;
     }
 
-    return e;
+    return correction;
   }
 
   applyCorrection(msg, correction) {

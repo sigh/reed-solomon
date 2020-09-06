@@ -11,6 +11,7 @@ body {
   display: grid;
   grid-template-columns: 100px 1fr;
   align-items: center;
+  grid-row-gap: 5px;
 }
 
 .bytes {

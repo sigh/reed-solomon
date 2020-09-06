@@ -42,21 +42,31 @@ class Display {
     element.textContent = list.join(', ');
   }
 
-  _displayPolynomial(element, poly) {
+  _displayPolynomial(element, poly, ignoreZeros) {
     element.innerHTML = '';
     let degree = poly.length - 1;
+
+    let isEmpty = true;
     for (let i = 0; i < poly.length; i++) {
-      element.appendChild(document.createTextNode(toHexString(poly[i])));
+      if (ignoreZeros && poly[i] == 0) continue;
+
+      if (!isEmpty) {
+        element.appendChild(document.createTextNode(' + '));
+      }
+      isEmpty = false;
+
       let exp = degree - i;
+      element.appendChild(document.createTextNode(toHexString(poly[i])));
       if (exp > 0) {
         element.appendChild(this._makeTextElem('var', 'x'));
       }
       if (exp > 1) {
         element.appendChild(this._makeTextElem('sup', exp));
       }
-      if (exp > 0) {
-        element.appendChild(document.createTextNode(' + '));
-      }
+    }
+
+    if (isEmpty) {
+      element.appendChild(document.createTextNode('0'));
     }
   }
 
@@ -83,7 +93,7 @@ class Display {
     this._displayPolynomial(this._elements.polyRec, recieved);
 
     let syndromes = rs.syndromes(recieved);
-    this._displayPolynomial(this._elements.syndromes, syndromes);
+    this._displayPolynomial(this._elements.syndromes, syndromes, true);
 
     let errLoc = rs.errorLocator(syndromes);
     this._displayPolynomial(this._elements.errorLocator, errLoc);
@@ -91,8 +101,8 @@ class Display {
     let positions = rs.errorPositions(errLoc);
     this._displayList(this._elements.positions, positions);
 
-    let correction = rs.errorCorrection(recieved, syndromes, errLoc, positions);
-    this._displayPolynomial(this._elements.correctionPoly, correction);
+    let correction = rs.errorCorrection(syndromes, errLoc, positions);
+    this._displayPolynomial(this._elements.correctionPoly, correction, true);
 
     let decoded = rs.applyCorrection(recieved, correction);
     this._displayPolynomial(this._elements.decodedPoly, decoded);
