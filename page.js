@@ -7,7 +7,7 @@ const initPage = () => {
 };
 
 const toHexString = (n) => {
-  return n.toString(16).padStart(2, '0');
+  return n.toString(16).padStart(2, '0').toUpperCase();
 };
 
 class Display {
@@ -46,28 +46,25 @@ class Display {
     element.innerHTML = '';
     let degree = poly.length - 1;
 
-    let isEmpty = true;
+    let parts = [];
     for (let i = 0; i < poly.length; i++) {
       if (ignoreZeros && poly[i] == 0) continue;
 
-      if (!isEmpty) {
-        element.appendChild(document.createTextNode(' + '));
-      }
-      isEmpty = false;
-
       let exp = degree - i;
-      element.appendChild(document.createTextNode(toHexString(poly[i])));
+      let term = `\\mathrm{${toHexString(poly[i])}}`;
       if (exp > 0) {
-        element.appendChild(this._makeTextElem('var', 'x'));
+        term += 'x';
       }
       if (exp > 1) {
-        element.appendChild(this._makeTextElem('sup', exp));
+        term += `^{${exp}}`;
       }
+      parts.push(term);
     }
 
-    if (isEmpty) {
-      element.appendChild(document.createTextNode('0'));
-    }
+    if (!parts.length) parts = [toHexString(0)];
+
+    let text = '$$ ' + parts.join(' + ') + ' $$';
+    element.appendChild(document.createTextNode(text));
   }
 
   updateMessage(msg) {
@@ -110,5 +107,7 @@ class Display {
 
     let decodedMessage = (new TextDecoder()).decode(decoded);
     this._elements.decodedMessage.textContent = decodedMessage;
+
+    MathJax.typeset();
   }
 }

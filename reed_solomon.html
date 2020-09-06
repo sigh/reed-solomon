@@ -5,11 +5,21 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
-<script src="reed_solomon.js"></script>
-<script src="page.js"></script>
 <script>
+  MathJax = {
+    chtml: {
+      displayAlign: 'left',
+      scale: 0.8,
+    }
+  };
   window.addEventListener('load', () => { initPage(); });
 </script>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script src="reed_solomon.js"></script>
+<script src="page.js"></script>
 
 <body>
   <div id="codec-display">
