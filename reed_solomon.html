@@ -1,0 +1,30 @@
+<html>
+
+<head>
+  <title>Reed-Solomon Encoding</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<script src="reed_solomon.js"></script>
+<script src="page.js"></script>
+<script>
+  window.addEventListener('load', () => { initPage(); });
+</script>
+
+<body>
+  <div id="codec-display">
+    <span>Message</span>
+    <input id="message-input" type="text">
+
+    <span>Bytes (hex)</span>
+    <span class="bytes" id="message-utf8"></span>
+
+    <span>Polynomial</span>
+    <span class="polynomial" id="message-poly"></span>
+
+    <span>Encoded (hex)</span>
+    <span class="bytes" id="message-encoded"></span>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,18 @@
+#message-input {
+  width: 50em;
+}
+
+body {
+  font-family: sans-serif;
+  font-size: small;
+}
+
+#codec-display {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+}
+
+.bytes {
+  font-family: monospace;
+}
