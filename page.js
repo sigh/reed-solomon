@@ -128,10 +128,10 @@ class Display {
   }
 
   _syndromeTable(syndromes) {
-    let table = [['i'], ['\\alpha^i'], ['R(\\alpha^i)']]
+    let table = [['j'], ['\\alpha^j'], ['r(\\alpha^j) = S_j']]
     for (let i = 0; i < syndromes.length; i++) {
-      table[0].push(i);
-      table[1].push(toTexHexString(GF2_8.EXP[i]));
+      table[0].push(i+1);
+      table[1].push(toTexHexString(GF2_8.EXP[i+1]));
       table[2].push(toTexHexString(syndromes[i]));
     }
     return table;
@@ -169,10 +169,10 @@ class Display {
     let positions = rs.errorPositions(errLoc);
     this._displayList(this._elements.positions, positions);
 
-    let correction = rs.errorCorrection(syndromes, errLoc, positions);
-    this._displayPolynomial(this._elements.correctionPoly, correction, true);
+    let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
+    this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
 
-    let decoded = rs.applyCorrection(recieved, correction);
+    let decoded = rs.applyError(recieved, errorPolynomial);
     this._displayPolynomial(this._elements.decodedPoly, decoded);
     this._displayBytes(this._elements.decodedUtf8, decoded);
 

@@ -69,13 +69,13 @@
     </div>
 
 
-    <span>Encoded (hex)</span>
+    <span>Encoded</span>
     <span class="bytes" id="message-encoded"></span>
 
-    <span>Recieved (hex)</span>
+    <span>Recieved</span>
     <span class="bytes" id="recieved-encoded"></span>
 
-    <span>Recieved \(r(x) = s(x) + e(x)\)</span>
+    <span>\(r(x) = s(x) + e(x)\)</span>
     <div>
       <div class="description">
         Interpret the data we recieve a polynomial \(r(x)\). This data may
@@ -89,7 +89,7 @@
     <div>
       <div class="description">
         Define \(t\) <em>syndromes</em> where \(r(x)\) is evaluated for each
-        root of \(g(x)\), i.e. \(\alpha^j\) where \(0 \le j \lt t\).
+        root of \(g(x)\), i.e. \(\alpha^j\) where \(1 \le j \le t\).
         <br>
         For a valid codeword \(c(x)\), we know that \(c(\alpha^j) = 0\) because
         \(g(x)\) divides \(c(x)\) by definition.
@@ -116,13 +116,15 @@
           <li>\(i_k\) is the position of the errors</li>
           <li>\(e_{i_k}\) is the magnitude of the errors</li>
         </ul>
-        Define the <em>error locators</em> \(X_k = \alpha^{i_k}\).
+        Define \(X_k = \alpha^{i_k}\).
         <br>
         Thus \(
           S_j = e(\alpha^j)
               = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k}
               = \sum_{k=1}^{\nu} e_{i_k} X_k^j
         \)
+        <br>
+        TODO: We want to find the smallest polynomial e(x) which works.
       </div>
     </div>
 
@@ -138,9 +140,9 @@
         \(S_j \Lambda_{\nu} + S_{j+1}\Lambda_{\nu-1} + \cdots + S_{j+\nu-1} \Lambda_1 = - S_{j + \nu} \)
         for \(1 \leq j \leq v\)
         <br>
-        If we knew \(\nu\) we could solve this, but we don't. Naively we can
-        still solve this by trying values of \(\nu\) from the largest value,
-        \(t\), down until the system is solvable. The first value of
+        If we knew \(\nu\) we could solve this directly, but we don't. Naively
+        we can still solve this by trying values of \(\nu\) from the largest
+        value, \(t\), down until the system is solvable. The first value of
         \(\nu\) for which the system is solvable is the number of errors.
         <br>
         The <a href="https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm">Berlekamp-Massey algorithm</a>
@@ -155,6 +157,11 @@
         By construction \(\Lambda (X_{k}^{-1}) = 0\). Thus by determining
         the roots of \(\Lambda(x)\) we can find
         \(i_k = \log_{\alpha}(\alpha^{i_k}) = \log_{\alpha}(X_k)\).
+        <br>
+        Because \(GF(2^8)\) only has 256 elements, we can brute force
+        the solution by testing each possible value.
+        <a href="https://en.wikipedia.org/wiki/Chien_search">Chien search</a>
+        is a more efficient way to implement this search.
       </div>
       <div id="error-positions"></div>
     </div>
@@ -171,16 +178,17 @@
         <a href="https://en.wikipedia.org/wiki/Forney_algorithm">Forney algorithm</a>:
         <br>
         Define the <em>syndrome polynomial</em>
-        \(S(x) = S_0 x^0 + S_1 x^1 + \cdots + S_{\nu} x^{\nu}\)
+        \(S(x) = S_1 + S_2 x + \cdots + S_{\nu} x^{\nu-1}\)
         <br>
         Define the <em>error evaluator</em> polynomial
         \(\Omega(x) = S(x)\Lambda(x) \pmod{x^{\nu}}\)
         <br>
         Let \(\Lambda'(x) = \sum _{k=1}^{\nu} k \Lambda_i x^{k-1} \) be the
         <a href="https://en.wikipedia.org/wiki/Formal_derivative">formal derivative</a>
-        of \(\Lambda(x)\).
+        of \(\Lambda(x)\). Note: multiplication by \(k\) is \(k\) repeated
+        additions, <em>not</em> field multiplication.
         <br>
-        Then \(e_{i_k}=-{\frac {\Omega (X_{k}^{\nu})}{\Lambda '(X_{k}^{-1})}}\)
+        Then \(e_{i_k}=-{\frac {\Omega (X_{k}^{-1})}{\Lambda '(X_{k}^{-1})}}\)
       </div>
       <div class="polynomial" id="correction-poly"></div>
     </div>
@@ -214,7 +222,7 @@
 
     <div>Generator polynomial</div>
     <div>
-      $$ g(x) = \prod_{j=0}^{t-1} (x - \alpha^j) $$
+      $$ g(x) = \prod_{j=1}^{t} (x - \alpha^j) $$
     </div>
   </div>
 </body>

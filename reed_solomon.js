@@ -61,6 +61,10 @@ class GF2_8 {
   })();
 
   // Polynomial functions.
+  //
+  // Polynomials are stored as arrays with with the lower order terms last.
+  // So the constant term is at the end of the array.
+  // e.g. [3, 4, 5] = 3x^2 + 4x + 5
 
   // Evaluates p(x)
   static polyEval(p, x) {
@@ -86,6 +90,11 @@ class GF2_8 {
       r[i + r.length - q.length] ^= q[i];
     }
     return r;
+  }
+
+  // p-q
+  static polySub(p, q) {
+    return this.polyAdd(p, q);
   }
 
   // p*q
@@ -123,6 +132,20 @@ class GF2_8 {
 
     return [r.subarray(0, resultLen), r.subarray(resultLen)];
   }
+
+  // Formal derivative of p(x): p'(x)
+  // p'(x) = p_1 + 2(p_2*x) + 3(p_3*x^2) + ...
+  //       = p_1 + p_3*x^2 + ...
+  // Note: The multiplication outside the brackets is not field multiplication,
+  //       but repeated addition. In GF(2^8), addition is xor, and repeated
+  //       xor just toggles between 0 and the original value.
+  static polyDeriv(p) {
+    let r = new Uint8Array(p.length-1);
+    for (let i = r.length-1; i >= 0; i-=2) {
+      r[i] = p[i];
+    }
+    return r;
+  }
 }
 
 class ReedSolomon {
@@ -134,7 +157,7 @@ class ReedSolomon {
   generatorPoly(nsym) {
     let g = [1];
     for (let i = 0; i < nsym; i++) {
-      g = GF2_8.polyMul(g, [1, GF2_8.EXP[i]]);
+      g = GF2_8.polyMul(g, [1, GF2_8.EXP[i+1]]);
     }
     return g;
   };
@@ -155,7 +178,7 @@ class ReedSolomon {
   syndromes(msg) {
     let synd = new Uint8Array(this._nsym);
     for (let i = 0; i < this._nsym; i++) {
-      synd[i] = GF2_8.polyEval(msg, GF2_8.EXP[i])
+      synd[i] = GF2_8.polyEval(msg, GF2_8.EXP[i+1])
     }
     return synd;
   }
@@ -195,41 +218,34 @@ class ReedSolomon {
   }
 
   errorEvaluator(synd, errLoc) {
-    let revSynd = [0, ...synd].reverse();
-    let mul = GF2_8.polyMul(revSynd, errLoc);
-    let result = mul.subarray(mul.length - this._nsym - 1);
+    synd.reverse();
+    let mul = GF2_8.polyMul(synd, errLoc);
+    synd.reverse();  // Keep synd unchanged.
+    let result = mul.subarray(mul.length - this._nsym);
     return result;
   }
 
-  errorCorrection(synd, errLoc, errPos) {
+  errorPolynomial(synd, errLoc, errPos) {
     let errEval = this.errorEvaluator(synd, errLoc);
-    let correction = new Uint8Array(Math.max(...errPos)+1);
+    let errLocDeriv = GF2_8.polyDeriv(errLoc);
+
+    let errorPolynomial = new Uint8Array(Math.max(...errPos)+1);
 
     for (const pos of errPos) {
-      let expPos = GF2_8.EXP[pos];
+      let xInv = GF2_8.div(1, GF2_8.EXP[pos]);
 
-      let errLocPrimeTerms = []
-      for (const pos1 of errPos) {
-        if (pos1 !== pos) {
-          errLocPrimeTerms.push(
-            GF2_8.sub(1, GF2_8.div(GF2_8.EXP[pos1], expPos)));
-        }
-      }
+      let n = GF2_8.polyEval(errEval, xInv);
+      let d = GF2_8.polyEval(errLocDeriv, xInv);
+      let magnitude = GF2_8.div(n, d);
 
-      let errLocPrime = errLocPrimeTerms.reduce((a, b) => GF2_8.mul(a, b), 1);
-
-      let y = GF2_8.polyEval(errEval, GF2_8.div(1, expPos));
-      y = GF2_8.mul(expPos, y)
-
-      let magnitude = GF2_8.div(y, errLocPrime);
-      correction[correction.length-pos-1] = magnitude;
+      errorPolynomial[errorPolynomial.length-pos-1] = magnitude;
     }
 
-    return correction;
+    return errorPolynomial;
   }
 
-  applyCorrection(msg, correction) {
-    let corrected = GF2_8.polyAdd(msg, correction);
+  applyError(msg, errorPolynomial) {
+    let corrected = GF2_8.polySub(msg, errorPolynomial);
     let truncated = corrected.subarray(0, msg.length - this._nsym);
     return truncated;
   }
