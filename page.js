@@ -10,6 +10,37 @@ const toHexString = (n) => {
   return n.toString(16).padStart(2, '0').toUpperCase();
 };
 
+const toTexHexString = (n) => {
+  return `\\texttt{${toHexString(n)}}`;
+};
+
+const deferUntilAnimationFrame = (fn) => {
+  let lastArgs = null;
+  let promise = null;
+  let alreadyEnqueued = false;
+  return ((...args) => {
+    lastArgs = args;
+
+    if (!alreadyEnqueued) {
+      alreadyEnqueued = true;
+      promise = new Promise((resolve) => {
+        window.requestAnimationFrame(() => {
+          try {
+            fn(...lastArgs);
+          } finally {
+            resolve();
+            lastArgs = null;
+            promise = null;
+            alreadyEnqueued = false;
+          }
+        });
+      });
+    }
+
+    return promise;
+  });
+};
+
 class Display {
   constructor() {
     this._elements = {
@@ -26,6 +57,18 @@ class Display {
       decodedUtf8: document.getElementById('decoded-utf8'),
       decodedMessage: document.getElementById('decoded-message'),
     };
+
+    this._typesetElements = [
+      this._elements.polyIn,
+      this._elements.polyRec,
+      this._elements.syndromes,
+      this._elements.positions,
+      this._elements.correctionPoly,
+      this._elements.errorLocator,
+      this._elements.decodedPoly,
+    ];
+
+    this.updateMessage = deferUntilAnimationFrame(this.updateMessage.bind(this));
   }
 
   _displayBytes(element, bytes) {
@@ -51,7 +94,7 @@ class Display {
       if (ignoreZeros && poly[i] == 0) continue;
 
       let exp = degree - i;
-      let term = `\\mathrm{${toHexString(poly[i])}}`;
+      let term = toTexHexString(poly[i]);
       if (exp > 0) {
         term += 'x';
       }
@@ -65,6 +108,33 @@ class Display {
 
     let text = '$$ ' + parts.join(' + ') + ' $$';
     element.appendChild(document.createTextNode(text));
+  }
+
+  _displayTexTable(element, table) {
+    element.innerHTML = '';
+
+    const cols = table[0].length;
+    const header = '|c'.repeat(cols) + '|';
+
+    let parts = [''];
+    for (const row of table) {
+      parts.push(row.join(' & ') + ' \\\\');
+    }
+    parts.push('');
+    const body = parts.join('\\hline ');
+
+    element.appendChild(document.createTextNode(
+      `\\[\\begin{array}{${header}}${body}\\end{array}\\]`));
+  }
+
+  _syndromeTable(syndromes) {
+    let table = [['i'], ['\\alpha^i'], ['R(\\alpha^i)']]
+    for (let i = 0; i < syndromes.length; i++) {
+      table[0].push(i);
+      table[1].push(toTexHexString(GF2_8.EXP[i]));
+      table[2].push(toTexHexString(syndromes[i]));
+    }
+    return table;
   }
 
   updateMessage(msg) {
@@ -90,7 +160,8 @@ class Display {
     this._displayPolynomial(this._elements.polyRec, recieved);
 
     let syndromes = rs.syndromes(recieved);
-    this._displayPolynomial(this._elements.syndromes, syndromes, true);
+    let table = this._syndromeTable(syndromes);
+    this._displayTexTable(this._elements.syndromes, table);
 
     let errLoc = rs.errorLocator(syndromes);
     this._displayPolynomial(this._elements.errorLocator, errLoc);
@@ -108,6 +179,6 @@ class Display {
     let decodedMessage = (new TextDecoder()).decode(decoded);
     this._elements.decodedMessage.textContent = decodedMessage;
 
-    MathJax.typeset();
+    MathJax.typeset(this._typesetElements);
   }
 }

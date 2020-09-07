@@ -1,11 +1,14 @@
 // Mostly following the implementation in
 // https://en.wikiversity.org/wiki/Reed%E2%80%93Solomon_codes_for_coders
 
+// Arithmetic for elements and polynomials over GF(2^8).
 class GF2_8 {
+  static CHARACTERISTIC = 256;
+  // The primitive polynomial: z^8+z^4+z^3+z^2+1.
   static PRIM = 0x11d;
-  static CHARACTERISTIC = 0x100;
-  static SIZE = 0xFF;
   static GENERATOR = 0x02;
+  // Order of the generator. i.e. the number of non-zero elements.
+  static ORDER = 255;
 
   // Addition and subtraction (same).
 
@@ -21,25 +24,25 @@ class GF2_8 {
 
   static mul(x, y) {
     if (x === 0 || y === 0) return 0;
-    return this.EXP[(this.LOG[x] + this.LOG[y])%this.SIZE];
+    return this.EXP[(this.LOG[x] + this.LOG[y])%this.ORDER];
   }
 
   static div(x, y) {
     if (x === 0) return 0;
-    return this.EXP[(this.LOG[x] + this.SIZE - this.LOG[y])%this.SIZE];
+    return this.EXP[(this.LOG[x] + this.ORDER - this.LOG[y])%this.ORDER];
   }
 
   static pow(x, p) {
-    return this.EXP[(this.LOG[x] * p)%this.SIZE];
+    return this.EXP[(this.LOG[x] * p)%this.ORDER];
   }
 
   // Calculate lookup tables.
 
   // EXP[i] = GENERATOR^i.
   static EXP = (() => {
-    let exp = new Uint8Array(this.SIZE);
+    let exp = new Uint8Array(this.ORDER);
 
-    for (let i = 0, x = 1; i < this.SIZE; i++) {
+    for (let i = 0, x = 1; i < this.ORDER; i++) {
       exp[i] = x;
       x <<= 1;
       if (x & this.CHARACTERISTIC) x = this.sub(x, this.PRIM);
@@ -183,9 +186,9 @@ class ReedSolomon {
 
   errorPositions(errLoc) {
     let positions = [];
-    for (let i = 0; i < GF2_8.SIZE; i++) {
+    for (let i = 0; i < GF2_8.ORDER; i++) {
       if (GF2_8.polyEval(errLoc, GF2_8.EXP[i]) == 0) {
-        positions.push(GF2_8.SIZE - i);
+        positions.push(GF2_8.ORDER - i);
       }
     }
     return positions;
@@ -205,15 +208,15 @@ class ReedSolomon {
     for (const pos of errPos) {
       let expPos = GF2_8.EXP[pos];
 
-      let errLocPrimeTmp = []
+      let errLocPrimeTerms = []
       for (const pos1 of errPos) {
         if (pos1 !== pos) {
-          errLocPrimeTmp.push(
+          errLocPrimeTerms.push(
             GF2_8.sub(1, GF2_8.div(GF2_8.EXP[pos1], expPos)));
         }
       }
 
-      let errLocPrime = errLocPrimeTmp.reduce((a, b) => GF2_8.mul(a, b), 1);
+      let errLocPrime = errLocPrimeTerms.reduce((a, b) => GF2_8.mul(a, b), 1);
 
       let y = GF2_8.polyEval(errEval, GF2_8.div(1, expPos));
       y = GF2_8.mul(expPos, y)
