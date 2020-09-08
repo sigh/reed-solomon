@@ -11,7 +11,7 @@ body {
   display: inline-grid;
   grid-template-columns: 130px 1fr;
   overflow:auto;
-  align-items: center;
+  align-items: top;
 }
 
 .bytes {
@@ -31,4 +31,13 @@ blockquote {
 
 h2,#configuration,blockquote {
   grid-column: 1 / span 2;
+}
+
+.polynomial {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.clarification {
+  color: #777;
+  padding-left: 10px;
 }

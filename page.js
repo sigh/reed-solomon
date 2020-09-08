@@ -56,16 +56,12 @@ class Display {
       decodedPoly: document.getElementById('decoded-poly'),
       decodedUtf8: document.getElementById('decoded-utf8'),
       decodedMessage: document.getElementById('decoded-message'),
+      nu: document.getElementById('nu'),
     };
 
     this._typesetElements = [
-      this._elements.polyIn,
-      this._elements.polyRec,
       this._elements.syndromes,
       this._elements.positions,
-      this._elements.correctionPoly,
-      this._elements.errorLocator,
-      this._elements.decodedPoly,
     ];
 
     this.updateMessage = deferUntilAnimationFrame(this.updateMessage.bind(this));
@@ -89,25 +85,28 @@ class Display {
     element.innerHTML = '';
     let degree = poly.length - 1;
 
-    let parts = [];
+    let isEmpty = true;
     for (let i = 0; i < poly.length; i++) {
       if (ignoreZeros && poly[i] == 0) continue;
 
+      if (!isEmpty) {
+        element.appendChild(document.createTextNode(' + '));
+      }
+      isEmpty = false;
+
       let exp = degree - i;
-      let term = toTexHexString(poly[i]);
+      element.appendChild(this._makeTextElem('code', toHexString(poly[i])));
       if (exp > 0) {
-        term += 'x';
+        element.appendChild(this._makeTextElem('var', 'x'));
       }
       if (exp > 1) {
-        term += `^{${exp}}`;
+        element.appendChild(this._makeTextElem('sup', exp));
       }
-      parts.push(term);
     }
 
-    if (!parts.length) parts = [toHexString(0)];
-
-    let text = '$$ ' + parts.join(' + ') + ' $$';
-    element.appendChild(document.createTextNode(text));
+    if (isEmpty) {
+      element.appendChild(this._makeTextElem('code', '00'));
+    }
   }
 
   _displayTexTable(element, table) {
@@ -137,6 +136,23 @@ class Display {
     return table;
   }
 
+  _errPosTable(errPos) {
+    let table = [
+      ['X_k^{-1}'],
+      ['\\Lambda(X_{k}^{-1})'],
+      ['\\alpha^{i_k} = X_k'],
+      ['i_k = \\log_{\\alpha}(\\alpha^{i_k})'],
+    ];
+    for (const ik of errPos) {
+      let xk = GF2_8.LOG[ik];
+      table[0].push(toTexHexString(GF2_8.div(1, xk)));
+      table[1].push(toTexHexString(0));
+      table[2].push(toTexHexString(xk));
+      table[3].push(ik);
+    }
+    return table;
+  }
+
   updateMessage(msg) {
     let rs = new ReedSolomon(10);
 
@@ -160,14 +176,16 @@ class Display {
     this._displayPolynomial(this._elements.polyRec, recieved);
 
     let syndromes = rs.syndromes(recieved);
-    let table = this._syndromeTable(syndromes);
-    this._displayTexTable(this._elements.syndromes, table);
+    this._displayTexTable(
+      this._elements.syndromes, this._syndromeTable(syndromes));
 
     let errLoc = rs.errorLocator(syndromes);
     this._displayPolynomial(this._elements.errorLocator, errLoc);
 
     let positions = rs.errorPositions(errLoc);
-    this._displayList(this._elements.positions, positions);
+    this._displayTexTable(
+      this._elements.positions, this._errPosTable(positions));
+    this._elements.nu.textContent = positions.length;
 
     let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
     this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
