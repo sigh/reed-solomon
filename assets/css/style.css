@@ -1,5 +1,6 @@
 #message-input {
-  width: 470px;
+  max-width: 460px;
+  width: 90%;
 }
 
 body {
@@ -9,7 +10,7 @@ body {
 
 #main_content {
   display: inline-grid;
-  grid-template-columns: 130px 1fr;
+  grid-template-columns: 140px 1fr;
   overflow:auto;
   align-items: top;
 }
@@ -24,13 +25,14 @@ input[type=number]{
 
 blockquote {
   background-color: #fff2ac;
-  max-width: 600px;
   margin-inline-start: 0px;
   padding-inline-start: 10px;
+  border-radius: 5px;
 }
 
 h2,#configuration,blockquote {
   grid-column: 1 / span 2;
+  max-width: 600px;
 }
 
 .polynomial {
@@ -40,4 +42,10 @@ h2,#configuration,blockquote {
 .clarification {
   color: #777;
   padding-left: 10px;
+}
+
+#decoded-message {
+  background-color: lightgreen;
+  padding: 2px 5px;
+  border-radius: 2px;
 }

@@ -20,7 +20,7 @@ title: Reed-Solomon Error Correction
   </span>
 
   Generator element: \\(\\alpha = \\texttt{02}\\)
-  <span class="clarification">
+ <span class="clarification">
   An element in \\( GF(2^8) \\) whose powers generate all non-zero elements.
   i.e. \\( GF(2^8) = \\{0, 1, \alpha, \alpha^2, \alpha^3, ...\\} \\)
   </span>
@@ -41,6 +41,10 @@ title: Reed-Solomon Error Correction
 Message \\(m\\)
 
 <input id="message-input" type="text" value="hello world">
+
+> First the message must be encoded as a sequence of bytes.
+> Here the input string is
+> [UTF-8](https://en.wikipedia.org/wiki/UTF-8) encoded.
 
 Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
@@ -155,7 +159,7 @@ Syndromes \\(S_j = r(\\alpha^j) = e(\\alpha^j)\\)
 >> will efficiently find both the minimal \\(\\nu\\) and the solution.
 
 <div markdown=1>
-Error Locator \\(\\Lambda(x) = \\prod_{k=1}^\\nu (1 - x X_k )\\)
+Error locator \\(\\Lambda(x) = \\prod_{k=1}^\\nu (1 - x X_k )\\)
 
 where \\(X_{k} = \\alpha^{i_k}\\)
 </div>
@@ -175,7 +179,7 @@ Number of errors \\(\\nu\\)
 > [Chien search](https://en.wikipedia.org/wiki/Chien_search)
 > is a more efficient way to implement this search.
 
-Error Positions \\(i_k\\)
+Error positions \\(i_k\\)
 
 <span id="error-positions"></span>
 
@@ -204,16 +208,29 @@ Error Positions \\(i_k\\)
 
 <span class="polynomial" id="correction-poly"></span>
 
-Decoded Polynomial \\(p'(x) = \\lfloor \\frac{r(x) - e(x)}{x^t} \\rfloor \\)
+> Calculate \\(s'(x) = r(x) - e(x)\\). If there weren't too many errors
+> then \\(s'(x) = s(x)\\), otherwise our message is corrupted!
+>
+> The message can be recovered by truncating the \\(t\\) check symbols
+> \\(p'(x) = \\lfloor \\frac{s'(x)}{x^t} \\rfloor \\), then recast as a byte
+> string.
+
+Decoded polynomial
+\\(p'(x) = \\lfloor \\frac{r(x) - e(x)}{x^t} \\rfloor \\)
 
 <span class="polynomial" id="decoded-poly"></span>
 
-Decoded Bytes
+Decoded bytes
+\\([a'\_k, \\cdots, a'\_1]\\)
+where
+\\(p'(x) = \\sum_{j=1}^k a'_j x^{j-1}\\)
 
 <span class="bytes" id="decoded-utf8"></span>
 
 ## Result
 
-Result
+> Convert the UTF-8 encoded bytes back to a string.
+
+\\(m' = \\text{utf8}^{-1}([a'\_k, \\cdots, a'\_1]) \\)
 
 <span id="decoded-message"></span>
