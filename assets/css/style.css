@@ -31,6 +31,20 @@ p, #main_content > * {
   width: 90%;
 }
 
+#corruptor {
+  font-size: small;
+  margin-left: -4px;
+}
+.bad-input {
+  background: inherit;
+  animation-name: bad-input-animation;
+  animation-duration: 0.2s;
+}
+@keyframes bad-input-animation {
+  from {background: #faa;}
+  to {}
+}
+
 input[type=number]{
   width: 4em;
 }

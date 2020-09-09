@@ -93,17 +93,28 @@ Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
 <!-- end-intermediate-results -->
 
+## Transmission
+
 Encoded
 
 <span class="bytes" id="message-encoded"></span>
 
-## Transmission
 
-## Decoding
+Corrupting channel
+
+<div>
+  <input type="text" class="bytes" id="corruptor" size=20>
+  <br>
+  <span class="clarification">
+  Change the text to corrupt the message in transit!
+  </span>
+</div>
 
 Received
 
-<span class="bytes" id="recieved-encoded"></span>
+<span class="bytes" id="received-encoded"></span>
+
+## Decoding
 
 <!-- start-intermediate-results -->
 
@@ -125,7 +136,7 @@ Received
 where \\(e(x) = \\sum_{k=1}^\\nu e_{i_k} x^{i_k}\\)
 </div>
 
-<span class="polynomial" id="recieved-poly"></span>
+<span class="polynomial" id="received-poly"></span>
 
 >  Define \\(t\\) _syndromes_:
 >  \\(S_j = r(\\alpha^j)\\) where \\(1 \\le j \\le t\\).

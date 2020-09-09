@@ -1,6 +1,9 @@
 const initPage = () => {
   let input = document.getElementById('message-input');
-  let display = new AlgorithmDisplay();
+  let corruptor = new Corrupter(
+    document.getElementById('corruptor'));
+
+  let display = new AlgorithmDisplay(corruptor);
 
   input.oninput = (e => display.updateMessage(input.value));
   input.oninput();
@@ -89,13 +92,19 @@ const setUpVisibilityOptions = () => {
 };
 
 class AlgorithmDisplay {
-  constructor() {
+  constructor(corruptor) {
+    this._corruptor = corruptor;
+    this._corruptor.addEventListener('change', (e) => {
+      this.messageReceived(e.detail);
+    });
+    this._rs = new ReedSolomon(10);
+
     this._elements = {
       utf8In: document.getElementById('message-utf8'),
       polyIn: document.getElementById('message-poly'),
       encoded: document.getElementById('message-encoded'),
-      recieved: document.getElementById('recieved-encoded'),
-      polyRec: document.getElementById('recieved-poly'),
+      received: document.getElementById('received-encoded'),
+      polyRec: document.getElementById('received-poly'),
       syndromes: document.getElementById('syndromes'),
       errorLocator: document.getElementById('error-locator'),
       positions: document.getElementById('error-positions'),
@@ -201,7 +210,7 @@ class AlgorithmDisplay {
   }
 
   updateMessage(msg) {
-    let rs = new ReedSolomon(10);
+    let rs = this._rs;
 
     // Encoding phase.
 
@@ -213,16 +222,16 @@ class AlgorithmDisplay {
     let encoded = rs.encode(msgUtf8);
     this._displayBytes(this._elements.encoded, encoded);
 
-    // Decoding phase.
-    let recieved = encoded;
-    // TODO: Make this configurable.
-    recieved[1] = 0;
-    recieved[4] = 3;
+    this._corruptor.setBytes(encoded);
+  }
 
-    this._displayBytes(this._elements.recieved, recieved);
-    this._displayPolynomial(this._elements.polyRec, recieved);
+  messageReceived(received) {
+    let rs = this._rs;
 
-    let syndromes = rs.syndromes(recieved);
+    this._displayBytes(this._elements.received, received);
+    this._displayPolynomial(this._elements.polyRec, received);
+
+    let syndromes = rs.syndromes(received);
     this._displayTexTable(
       this._elements.syndromes, this._syndromeTable(syndromes));
 
@@ -237,7 +246,7 @@ class AlgorithmDisplay {
     let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
     this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
 
-    let decoded = rs.applyError(recieved, errorPolynomial);
+    let decoded = rs.applyError(received, errorPolynomial);
     this._displayPolynomial(this._elements.decodedPoly, decoded);
     this._displayBytes(this._elements.decodedUtf8, decoded);
 
@@ -245,5 +254,78 @@ class AlgorithmDisplay {
     this._elements.decodedMessage.textContent = decodedMessage;
 
     MathJax.typeset(this._typesetElements);
+  }
+}
+
+class Corrupter extends EventTarget {
+  constructor(elem) {
+    super();
+
+    this._elem = elem;
+    this._originalBytes = [];
+    this._corruptedBytes = [];
+    this._prev = '';
+    this._callback = null;
+
+    // Valid bytes strings are space separated. The bytes can be empty, one
+    // or two characters to allow for intuitive editing.
+    const validRe = /^(|[a-f\d]{1,2})$/i;
+
+    elem.oninput = () => {
+      const value = elem.value;
+      const start = elem.selectionStart;
+      const end = elem.selectionEnd;
+
+      const parts = value.split(' ');
+      const isValid = parts.length <= this._originalBytes.length &&
+                      parts.every(b => b.match(validRe));
+
+      if (!isValid) {
+        // If we've tried to add characters, but failed, then go back to
+        // the start of the selection.
+        const offset = Math.max(0, value.length - this._prev.length);
+
+        elem.value = this._prev;
+        elem.selectionStart = start - offset;
+        elem.selectionEnd = end - offset;
+        // Flash background to indicate the input was an error.
+        elem.classList.add('bad-input');
+        elem.onanimationend = () => elem.classList.remove('bad-input');
+        return;
+      }
+
+      this._prev = value;
+      this._setCorruptedBytes(parts.map(v => parseInt(v||'0', 16)));
+    }
+  }
+
+  _setCorruptedBytes(bytes) {
+    // Ensure corruption doesn't change the length;
+    while (bytes.length < this._originalBytes.length) bytes.push(0);
+
+    this._corruptedBytes = bytes;
+    this.dispatchEvent(
+      new CustomEvent("change", {detail: this._corruptedBytes}));
+  }
+
+  setBytes(bytes) {
+    // Keep existing corruptions.
+    let newCorruptedBytes = [...bytes];
+    for (let i = 0; i < bytes.length && i < this._originalBytes.length; i++) {
+      if (this._corruptedBytes[i] !== this._originalBytes[i]) {
+        newCorruptedBytes[i] = this._corruptedBytes[i];
+      }
+    }
+
+    this._elem.value = [...newCorruptedBytes].map(toHexString).join(' ');
+    this._originalBytes = bytes;
+    this._prev = this._elem.value;
+    this._elem.setAttribute('size', bytes.length*3+1);
+
+    this._setCorruptedBytes(newCorruptedBytes);
+  }
+
+  getBytes() {
+    return this._originalBytes;
   }
 }
