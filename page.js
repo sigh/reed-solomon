@@ -1,9 +1,11 @@
 const initPage = () => {
   let input = document.getElementById('message-input');
-  let display = new Display();
-  input.oninput = (e => display.updateMessage(input.value));
+  let display = new AlgorithmDisplay();
 
+  input.oninput = (e => display.updateMessage(input.value));
   input.oninput();
+
+  setUpVisibilityOptions();
 };
 
 const toHexString = (n) => {
@@ -41,7 +43,52 @@ const deferUntilAnimationFrame = (fn) => {
   });
 };
 
-class Display {
+const setUpVisibilityOptions = () => {
+  let allExplanations = [
+    ...document.getElementsByTagName('blockquote'),
+    ...document.getElementsByClassName('clarification')];
+
+  const setDisplayClass = (nodes, cssClass, display) => {
+    if (display) {
+      for (const node of nodes) node.classList.add(cssClass);
+    } else {
+      for (const node of nodes) node.classList.remove(cssClass);
+    }
+  };
+
+  let hideExplanations = document.getElementById('hide-explanations');
+  hideExplanations.onchange = () => {
+    setDisplayClass(
+      allExplanations, 'hide-explanation', hideExplanations.checked);
+  };
+
+  let intermediateNodes = [];
+  let inIntermediateSection = false;
+  for (const node of document.getElementById('main_content').childNodes) {
+    switch (node.nodeType) {
+      case Node.COMMENT_NODE:
+        if (node.data.trim() == 'end-intermediate-results') {
+          inIntermediateSection = false;
+        } else if (node.data.trim() == 'start-intermediate-results') {
+          inIntermediateSection = true;
+        }
+        break;
+
+      case Node.ELEMENT_NODE:
+        if (inIntermediateSection) intermediateNodes.push(node);
+        break;
+    }
+  }
+
+  let hideIntermediate = document.getElementById('hide-intermediate');
+  hideIntermediate.onchange = () => {
+    setDisplayClass(
+      intermediateNodes, 'hide-intermediate', hideIntermediate.checked);
+  };
+
+};
+
+class AlgorithmDisplay {
   constructor() {
     this._elements = {
       utf8In: document.getElementById('message-utf8'),

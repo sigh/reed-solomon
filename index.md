@@ -3,22 +3,33 @@ layout: default
 title: Reed-Solomon Error Correction
 ---
 
+<div id="overview" markdown=1>
+
+<input id="hide-explanations" type="checkbox">
+<label for="hide-explanations">Hide explanations</label>
+<input id="hide-intermediate" type="checkbox">
+<label for="hide-intermediate">Hide intermediate results</label>
+
+</div>
+
 ## Configuration
 
 <div id="configuration" markdown=1>
 
+  <span class="clarification">
   The encoder and decoder need to agree on all these configuration parameters.
+  </span>
 
   Number of check symbols \\(t = \\) <input type="number" value="10">
 
-  [Field](https://en.wikipedia.org/wiki/Finite_field): \\( GF(2^8) \\)
+  [Field](https://en.wikipedia.org/wiki/Finite_field): \\( GF(2^8) \\)  
   <span class="clarification">
   The symbols of the code.
   We could encode into another finite field but \\(GF(2^8)\\) maps nicely to
   bytes.
   </span>
 
-  Generator element: \\(\\alpha = \\texttt{02}\\)
+  Generator element: \\(\\alpha = \\texttt{02}\\)  
  <span class="clarification">
   An element in \\( GF(2^8) \\) whose powers generate all non-zero elements.
   i.e. \\( GF(2^8) = \\{0, 1, \alpha, \alpha^2, \alpha^3, ...\\} \\)
@@ -26,7 +37,7 @@ title: Reed-Solomon Error Correction
 
   [Primitive polynomial](
   https://en.wikipedia.org/wiki/Primitive_polynomial_(field_theory)):
-  \\(z^8+z^4+z^3+z^2+1 = \\texttt{0x11d} \\)
+  \\(z^8+z^4+z^3+z^2+1 = \\texttt{0x11d} \\)  
   <span class="clarification">
   Used to multiply field elements
   </span>
@@ -48,6 +59,8 @@ Message \\(m\\)
 Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
 <span class="bytes" id="message-utf8"></span>
+
+<!-- start-intermediate-results -->
 
 > Take the series of bytes as representing elements in the finite field
 > \\(GF(2^8)\\).
@@ -78,6 +91,8 @@ Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
 <span class="polynomial" id="message-poly-shifted"></span>
 
+<!-- end-intermediate-results -->
+
 Encoded
 
 <span class="bytes" id="message-encoded"></span>
@@ -89,6 +104,8 @@ Encoded
 Received
 
 <span class="bytes" id="recieved-encoded"></span>
+
+<!-- start-intermediate-results -->
 
 > Interpret the data we receive a polynomial \\(r(x)\\). This data may
 > not be the same as the transmitted data as it could have been corrupted
@@ -218,6 +235,8 @@ Decoded polynomial
 \\(p'(x) = \\lfloor \\frac{r(x) - e(x)}{x^t} \\rfloor \\)
 
 <span class="polynomial" id="decoded-poly"></span>
+
+<!-- end-intermediate-results -->
 
 Decoded bytes
 \\([a'\_k, \\cdots, a'\_1]\\)
