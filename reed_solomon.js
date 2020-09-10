@@ -168,7 +168,7 @@ class ReedSolomon {
   }
 
   encode(msg) {
-    let dividend = new Uint8Array(msg.length + this._gen.length - 1);
+    let dividend = new Uint8Array(msg.length + this._nsym);
     dividend.set(msg);
     let [p, q] = GF2_8.polyDiv(dividend, this._gen);
 
@@ -210,8 +210,8 @@ class ReedSolomon {
   errorPositions(errLoc) {
     let positions = [];
     for (let i = 0; i < GF2_8.ORDER; i++) {
-      if (GF2_8.polyEval(errLoc, GF2_8.EXP[i]) == 0) {
-        positions.push(GF2_8.ORDER - i);
+      if (GF2_8.polyEval(errLoc, i) === 0) {
+        positions.push(GF2_8.LOG[GF2_8.div(1, i)])
       }
     }
     return positions;
@@ -246,7 +246,21 @@ class ReedSolomon {
 
   applyError(msg, errorPolynomial) {
     let corrected = GF2_8.polySub(msg, errorPolynomial);
-    let truncated = corrected.subarray(0, msg.length - this._nsym);
-    return truncated;
+    return this.removeCheckSymbols(corrected);
+  }
+
+  removeCheckSymbols(msg) {
+    return msg.subarray(0, msg.length - this._nsym);
+  }
+
+  isValidCodeword(msg) {
+    return this.syndromes(msg).every(s => s == 0);
+  }
+
+  errorPositionsValid(errPos, errLoc, msg) {
+    // Ensure we found all the roots of errLoc.
+    if (errLoc.length - 1 != errPos.length) return false;
+    // Ensure each position is valid.
+    return errPos.every(p => p < msg.length);
   }
 }

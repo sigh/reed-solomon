@@ -1,7 +1,6 @@
 const initPage = () => {
   let input = document.getElementById('message-input');
-  let corruptor = new Corrupter(
-    document.getElementById('corruptor'));
+  let corruptor = new Corrupter();
 
   let display = new AlgorithmDisplay(corruptor);
 
@@ -46,18 +45,44 @@ const deferUntilAnimationFrame = (fn) => {
   });
 };
 
+const commentDelimitedNodes = (delimiter) => {
+  const start = 'start:' + delimiter;
+  const end = 'end:' + delimiter;
+
+  let nodes = [];
+
+  let inSection = false;
+  for (const node of document.getElementById('main_content').childNodes) {
+    switch (node.nodeType) {
+      case Node.COMMENT_NODE:
+        if (node.data.trim() == start) {
+          inSection = true;
+        } else if (node.data.trim() == end) {
+          inSection = false;
+        }
+        break;
+
+      case Node.ELEMENT_NODE:
+        if (inSection) nodes.push(node);
+        break;
+    }
+  }
+
+  return nodes;
+};
+
+const setDisplayClass = (nodes, cssClass, display) => {
+  if (display) {
+    for (const node of nodes) node.classList.add(cssClass);
+  } else {
+    for (const node of nodes) node.classList.remove(cssClass);
+  }
+};
+
 const setUpVisibilityOptions = () => {
   let allExplanations = [
     ...document.getElementsByTagName('blockquote'),
     ...document.getElementsByClassName('clarification')];
-
-  const setDisplayClass = (nodes, cssClass, display) => {
-    if (display) {
-      for (const node of nodes) node.classList.add(cssClass);
-    } else {
-      for (const node of nodes) node.classList.remove(cssClass);
-    }
-  };
 
   let hideExplanations = document.getElementById('hide-explanations');
   hideExplanations.onchange = () => {
@@ -65,23 +90,7 @@ const setUpVisibilityOptions = () => {
       allExplanations, 'hide-explanation', hideExplanations.checked);
   };
 
-  let intermediateNodes = [];
-  let inIntermediateSection = false;
-  for (const node of document.getElementById('main_content').childNodes) {
-    switch (node.nodeType) {
-      case Node.COMMENT_NODE:
-        if (node.data.trim() == 'end-intermediate-results') {
-          inIntermediateSection = false;
-        } else if (node.data.trim() == 'start-intermediate-results') {
-          inIntermediateSection = true;
-        }
-        break;
-
-      case Node.ELEMENT_NODE:
-        if (inIntermediateSection) intermediateNodes.push(node);
-        break;
-    }
-  }
+  let intermediateNodes = commentDelimitedNodes('intermediate-results');
 
   let hideIntermediate = document.getElementById('hide-intermediate');
   hideIntermediate.onchange = () => {
@@ -112,8 +121,13 @@ class AlgorithmDisplay {
       decodedPoly: document.getElementById('decoded-poly'),
       decodedUtf8: document.getElementById('decoded-utf8'),
       decodedMessage: document.getElementById('decoded-message'),
+      receivedPolyGood: document.getElementById('received-poly-good'),
+      receivedPolyUnfixable: document.getElementById('received-poly-unfixable'),
       nu: document.getElementById('nu'),
     };
+
+    this._fixErrorNodes = commentDelimitedNodes('fix-errors');
+    this._fixableMessageNodes = commentDelimitedNodes('fixable-message');
 
     this._typesetElements = [
       this._elements.syndromes,
@@ -235,18 +249,41 @@ class AlgorithmDisplay {
     this._displayTexTable(
       this._elements.syndromes, this._syndromeTable(syndromes));
 
-    let errLoc = rs.errorLocator(syndromes);
-    this._displayPolynomial(this._elements.errorLocator, errLoc);
+    let decoded;
+    if (rs.isValidCodeword(received)) {
+      setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', true);
+      this._elements.receivedPolyGood.style.display = null;
 
-    let positions = rs.errorPositions(errLoc);
-    this._displayTexTable(
-      this._elements.positions, this._errPosTable(positions));
-    this._elements.nu.textContent = positions.length;
+      // What we received was valid!
+      decoded = rs.removeCheckSymbols(received);
+    } else {
+      setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', false);
+      this._elements.receivedPolyGood.style.display = 'none';
 
-    let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
-    this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
+      let errLoc = rs.errorLocator(syndromes);
+      this._displayPolynomial(this._elements.errorLocator, errLoc);
+      this._elements.nu.textContent = errLoc.length - 1;
 
-    let decoded = rs.applyError(received, errorPolynomial);
+      let positions = rs.errorPositions(errLoc);
+      this._displayTexTable(
+        this._elements.positions, this._errPosTable(positions));
+
+      if (!rs.errorPositionsValid(positions, errLoc, received)) {
+        setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', true);
+        this._elements.receivedPolyUnfixable.style.display = null;
+        MathJax.typeset(this._typesetElements);
+        return;
+      } else {
+        setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', false);
+        this._elements.receivedPolyUnfixable.style.display = 'none';
+      }
+
+      let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
+      this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
+
+      decoded = rs.applyError(received, errorPolynomial);
+    }
+
     this._displayPolynomial(this._elements.decodedPoly, decoded);
     this._displayBytes(this._elements.decodedUtf8, decoded);
 
@@ -258,12 +295,15 @@ class AlgorithmDisplay {
 }
 
 class Corrupter extends EventTarget {
-  constructor(elem) {
+  constructor() {
     super();
 
+    let elem = document.getElementById('corruptor');
+    let reset = document.getElementById('reset-corruptor');
+
     this._elem = elem;
-    this._originalBytes = [];
-    this._corruptedBytes = [];
+    this._originalBytes = new Uint8Array();
+    this._corruptedBytes = new Uint8Array();
     this._prev = '';
     this._callback = null;
 
@@ -297,13 +337,18 @@ class Corrupter extends EventTarget {
       this._prev = value;
       this._setCorruptedBytes(parts.map(v => parseInt(v||'0', 16)));
     }
+
+    reset.onclick = () => {
+      this._setValueFromBytes(this._originalBytes);
+      this._setCorruptedBytes(this._originalBytes);
+    }
   }
 
   _setCorruptedBytes(bytes) {
     // Ensure corruption doesn't change the length;
     while (bytes.length < this._originalBytes.length) bytes.push(0);
 
-    this._corruptedBytes = bytes;
+    this._corruptedBytes = new Uint8Array(bytes);
     this.dispatchEvent(
       new CustomEvent("change", {detail: this._corruptedBytes}));
   }
@@ -317,12 +362,16 @@ class Corrupter extends EventTarget {
       }
     }
 
-    this._elem.value = [...newCorruptedBytes].map(toHexString).join(' ');
+    this._setValueFromBytes(newCorruptedBytes);
     this._originalBytes = bytes;
-    this._prev = this._elem.value;
     this._elem.setAttribute('size', bytes.length*3+1);
 
     this._setCorruptedBytes(newCorruptedBytes);
+  }
+
+  _setValueFromBytes(bytes) {
+    this._elem.value = [...bytes].map(toHexString).join(' ');
+    this._prev = this._elem.value;
   }
 
   getBytes() {

@@ -49,14 +49,21 @@ input[type=number]{
   width: 4em;
 }
 
-blockquote {
-  background-color: #fff2ac;
+blockquote,.notice {
   margin-inline-start: 0px;
   padding-inline-start: 10px;
   border-radius: 5px;
 }
 
-h2,#configuration,blockquote,#overview {
+blockquote {
+  background-color: #fff2ac;
+}
+
+.notice {
+  background-color: lightgreen;
+}
+
+h2,#configuration,blockquote,#overview,.notice {
   grid-column: 1 / span 2;
   max-width: 600px;
 }
@@ -76,9 +83,14 @@ h2,#configuration,blockquote,#overview {
   border-radius: 2px;
 }
 
-.hide-intermediate {
+.hide-intermediate, .hide-explanation, .hide-fix-errors, .hide-fixable-message {
   display: none;
 }
-.hide-explanation {
-  display: none;
+
+.error-notice {
+  background-color: #ffd2d2;
+}
+
+#reset-corruptor {
+  padding: 0px 5px;
 }

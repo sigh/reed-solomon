@@ -60,7 +60,7 @@ Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
 <span class="bytes" id="message-utf8"></span>
 
-<!-- start-intermediate-results -->
+<!-- start:intermediate-results -->
 
 > Take the series of bytes as representing elements in the finite field
 > \\(GF(2^8)\\).
@@ -91,7 +91,7 @@ Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 
 <span class="polynomial" id="message-poly-shifted"></span>
 
-<!-- end-intermediate-results -->
+<!-- end:intermediate-results -->
 
 ## Transmission
 
@@ -100,7 +100,8 @@ Encoded
 <span class="bytes" id="message-encoded"></span>
 
 
-Corrupting channel
+Corruptor
+<input type="button" id="reset-corruptor" value="Reset">
 
 <div>
   <input type="text" class="bytes" id="corruptor" size=20>
@@ -116,7 +117,7 @@ Received
 
 ## Decoding
 
-<!-- start-intermediate-results -->
+<!-- start:intermediate-results -->
 
 > Interpret the data we receive a polynomial \\(r(x)\\). This data may
 > not be the same as the transmitted data as it could have been corrupted
@@ -153,6 +154,13 @@ where \\(e(x) = \\sum_{k=1}^\\nu e_{i_k} x^{i_k}\\)
 Syndromes \\(S_j = r(\\alpha^j) = e(\\alpha^j)\\)
 
 <span id="syndromes"></span>
+
+<div class="notice" id="received-poly-good" markdown=1>
+\\(r(x)\\) is a valid codeword.
+All \\(S_j\\ = 0\\), thus \\(e(x) = 0\\).
+</div>
+
+<!-- start:fix-errors -->
 
 >  Note that
 >  \\(
@@ -193,10 +201,6 @@ where \\(X_{k} = \\alpha^{i_k}\\)
 
 <span class="polynomial" id="error-locator"></span>
 
-Number of errors \\(\\nu\\)
-
-<span id="nu"></span>
-
 > By construction \\(\\Lambda (X_{k}^{-1}) = 0\\). By determining
 > the roots of \\(\\Lambda(x)\\) we can find the error positions
 > \\(i_k = \\log_{\\alpha}(\\alpha^{i_k}) = \\log_{\\alpha}(X_k)\\).
@@ -205,10 +209,24 @@ Number of errors \\(\\nu\\)
 > the solution by testing each possible value of \\(X_{k}^{-1}\\).
 > [Chien search](https://en.wikipedia.org/wiki/Chien_search)
 > is a more efficient way to implement this search.
+>
+> Note: if we don't find \\(\\nu\\) different roots of \\(\\Lambda(x)\\) or
+> if the positions are outside the message, then the message has over
+> \\(t/2\\) errors.
 
 Error positions \\(i_k\\)
 
 <span id="error-positions"></span>
+
+<div class="notice error-notice" id="received-poly-unfixable" markdown=1>
+There are more than \\(t/2\\) errors. The message was not recovered.
+</div>
+
+<!-- start:fixable-message -->
+
+Number of errors \\(\\nu\\)
+
+<span id="nu"></span>
 
 > To find \\(e_{i_k}\\) we can solve the system of \\(\\nu\\) linear equations
 > given by the definition of \\(S_j\\):
@@ -242,12 +260,14 @@ Error positions \\(i_k\\)
 > \\(p'(x) = \\lfloor \\frac{s'(x)}{x^t} \\rfloor \\), then recast as a byte
 > string.
 
+<!-- end:fix-errors -->
+
 Decoded polynomial
 \\(p'(x) = \\lfloor \\frac{r(x) - e(x)}{x^t} \\rfloor \\)
 
 <span class="polynomial" id="decoded-poly"></span>
 
-<!-- end-intermediate-results -->
+<!-- end:intermediate-results -->
 
 Decoded bytes
 \\([a'\_k, \\cdots, a'\_1]\\)
@@ -256,10 +276,10 @@ where
 
 <span class="bytes" id="decoded-utf8"></span>
 
-## Result
-
 > Convert the UTF-8 encoded bytes back to a string.
 
 \\(m' = \\text{utf8}^{-1}([a'\_k, \\cdots, a'\_1]) \\)
 
 <span id="decoded-message"></span>
+
+<!-- end:fixable-message -->
