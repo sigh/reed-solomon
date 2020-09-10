@@ -1,9 +1,9 @@
 const initPage = () => {
   let input = document.getElementById('message-input');
-  let corruptor = new Corrupter();
+  let corrupter = new Corrupter();
   let configuration = new Configuration();
 
-  let display = new AlgorithmDisplay(corruptor, configuration);
+  let display = new AlgorithmDisplay(corrupter, configuration);
 
   input.oninput = (e => display.updateMessage(input.value));
   input.oninput();
@@ -102,11 +102,11 @@ const setUpVisibilityOptions = () => {
 };
 
 class AlgorithmDisplay {
-  constructor(corruptor, configuration) {
+  constructor(corrupter, configuration) {
     this._currentMessage = null;
 
-    this._corruptor = corruptor;
-    this._corruptor.addEventListener('change', (e) => {
+    this._corrupter = corrupter;
+    this._corrupter.addEventListener('change', (e) => {
       this.messageReceived(e.detail);
     });
     this._configuration = configuration;
@@ -117,6 +117,8 @@ class AlgorithmDisplay {
     this._elements = {
       utf8In: document.getElementById('message-utf8'),
       polyIn: document.getElementById('message-poly'),
+      checkPoly: document.getElementById('check-poly'),
+      encodedPoly: document.getElementById('encoded-poly'),
       encoded: document.getElementById('message-encoded'),
       received: document.getElementById('received-encoded'),
       polyRec: document.getElementById('received-poly'),
@@ -129,6 +131,7 @@ class AlgorithmDisplay {
       decodedMessage: document.getElementById('decoded-message'),
       receivedPolyGood: document.getElementById('received-poly-good'),
       receivedPolyUnfixable: document.getElementById('received-poly-unfixable'),
+      recoveredPoly: document.getElementById('recovered-poly'),
       tooLong: document.getElementById('message-too-long'),
       nu: document.getElementById('nu'),
     };
@@ -259,13 +262,19 @@ class AlgorithmDisplay {
     this._displayPolynomial(this._elements.polyIn, msgUtf8);
 
     let encoded = rs.encode(msgUtf8);
+
+    this._displayPolynomial(
+      this._elements.checkPoly, encoded.subarray(msgUtf8.length));
+    this._displayPolynomial(this._elements.encodedPoly, encoded);
     this._displayBytes(this._elements.encoded, encoded);
 
-    this._corruptor.setBytes(encoded);
+    this._corrupter.setBytes(encoded);
   }
 
   messageReceived(received) {
     let rs = this._configuration.getCodec();
+
+    this._elements.receivedPolyUnfixable.style.display = 'none';
 
     this._displayBytes(this._elements.received, received);
     this._displayPolynomial(this._elements.polyRec, received);
@@ -274,13 +283,13 @@ class AlgorithmDisplay {
     this._displayTexTable(
       this._elements.syndromes, this._syndromeTable(syndromes));
 
-    let decoded;
+    let recovered;
     if (rs.isValidCodeword(received)) {
       setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', true);
       this._elements.receivedPolyGood.style.display = null;
 
       // What we received was valid!
-      decoded = rs.removeCheckSymbols(received);
+      recovered = received;
     } else {
       setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', false);
       this._elements.receivedPolyGood.style.display = 'none';
@@ -289,26 +298,28 @@ class AlgorithmDisplay {
       this._displayPolynomial(this._elements.errorLocator, errLoc);
       this._elements.nu.textContent = errLoc.length - 1;
 
-      let positions = rs.errorPositions(errLoc);
+      let errPos = rs.errorPositions(errLoc);
       this._displayTexTable(
-        this._elements.positions, this._errPosTable(positions));
+        this._elements.positions, this._errPosTable(errPos));
 
-      if (!rs.errorPositionsValid(positions, errLoc, received)) {
+      if (!rs.errorPositionsValid(errPos, errLoc, received)) {
         setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', true);
         this._elements.receivedPolyUnfixable.style.display = null;
         MathJax.typeset(this._typesetElements);
         return;
       } else {
         setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', false);
-        this._elements.receivedPolyUnfixable.style.display = 'none';
       }
 
-      let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, positions);
+      let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, errPos);
       this._displayPolynomial(this._elements.correctionPoly, errorPolynomial, true);
 
-      decoded = rs.applyError(received, errorPolynomial);
+      recovered = GF2_8.polySub(received, errorPolynomial);
     }
 
+    this._displayPolynomial(this._elements.recoveredPoly, recovered);
+
+    let decoded = rs.removeCheckSymbols(recovered);
     this._displayPolynomial(this._elements.decodedPoly, decoded);
     this._displayBytes(this._elements.decodedUtf8, decoded);
 
@@ -323,8 +334,8 @@ class Corrupter extends EventTarget {
   constructor() {
     super();
 
-    let elem = document.getElementById('corruptor');
-    let reset = document.getElementById('reset-corruptor');
+    let elem = document.getElementById('corrupter');
+    let reset = document.getElementById('reset-corrupter');
 
     this._elem = elem;
     this._originalBytes = new Uint8Array();

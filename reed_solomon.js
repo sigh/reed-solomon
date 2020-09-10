@@ -1,16 +1,280 @@
-// Mostly following the implementation in
+// Implementation of a Reed-Solomon encoder/decoder which:
+//  - Encodes messages as polynomial coefficients (a BCH code).
+//  - Appends check symbols to the end of the message (a systematic code).
+//
+// The implementation here aims to:
+//  - Be reasonably efficient (the interactive page must compute it in real-time).
+//  - Follow closely the formal descriptions of the algorithms.
+//  - Avoid optimizations which reduce clarity.
+//
+// Borrows parts of the implementation from:
 // https://en.wikiversity.org/wiki/Reed%E2%80%93Solomon_codes_for_coders
 
-// Arithmetic for elements and polynomials over GF(2^8).
+// Reed-Solomon codec for a given number of check symbols.
+// When `t` check symbols are used, it can detect up to `t` errors and correct
+// up to `t/2` errors can be corrected.
+// Handling erasures with known locations is not implemented.
+class ReedSolomon {
+  // Construct an encoder which adds `t` check symbols.
+  constructor(t) {
+    this._t = t;
+    this._generatorPolynomial = this.generatorPoly();
+  }
+
+  // Reed-Solomon encode a byte array.
+  encode(msg) {
+    let p = msg;
+
+    // Pad the end of msg to make room for the check symbols.
+    // pShifted = msg(x)*x^t
+    let pShifted = new Uint8Array(p.length + this._t);
+    pShifted.set(msg);
+
+    // pShifted(x)*x^t = _(x)*g(x) + sR(x);
+    let [_, sR] = GF2_8.polyDiv(pShifted, this._generatorPolynomial);
+
+    // s(x) = pShifted(x) - sR(x);
+    let s = GF2_8.polySub(pShifted, sR);
+    return s;
+  }
+
+  // Reed-Solomon encode a string, using the UTF-8 byte respresentation.
+  encodeString(msgStr) {
+    let utf8Msg = (new TextEncoder()).encode(msgStr);
+    return this.encode(utf8Msg);
+  }
+
+  // Decode a recieved byte array.
+  // Throws an error if it could not be decoded.
+  decode(r) {
+    // Syndromes S_j of r(x): evaluate r(x) at each root of g(x).
+    let syndromes = this.syndromes(r);
+
+    // If all the syndromes are zero then the codeword is valid, since all
+    // the roots of g(x) must also be roots of r(x).
+    let isValidCodeword = syndromes(r).every(s => s == 0x00);
+
+    let recovered;
+    if (isValidCodeword) {
+      // The codeword is valid, so there is nothing to fix.
+      recovered = r;
+    } else {
+      // We have some errors, so try to fix them.
+
+      // Find the error locator Λ(x) which has a root for each error position.
+      let errLoc = this.errorLocator(syndromes);
+
+      // Find the error positions i_k by finding the roots of Λ(x).
+      let errPos = this.errorPositions(errLoc);
+
+      // If we could not find all the roots of errLoc, then we can't decode
+      // the message.
+      if (!this.errorPositionsValid(errPos, errLoc, r)) {
+        throw new Error('Could not decode message. Too many errors.');
+      }
+
+      // Given the location of the errors, solve for the error magnitudes,
+      // and thus determine the error polynomial e(x).
+      let e = this.errorPolynomial(syndromes, errLoc, errPos);
+
+      // Apply the error e(x) to the received message to recover our codeword.
+      // recovered s(x) = r(x) - e(x)
+      recovered = GF2_8.polySub(r, e);
+    }
+
+    // Remove the check symbols from the end of the codeword.
+    let decoded = this.removeCheckSymbols(recovered);
+
+    return decoded;
+  }
+
+  // Decode a recieved byte array, and return the UTF-8 string it encodes.
+  decodeStr(r) {
+    let decoded = this.decode(r);
+    // Decode UTF-8 encoded bytes.
+    let decodedMessage = (new TextDecoder()).decode(decoded);
+    return decodedMessage;
+  }
+
+  // Yields the roots of the generator polynomial g(x): α, α^2 ... α^t
+  *_generatorRoots() {
+    for (let i = 1; i <= this._t; i++) {
+      // α^i
+      yield GF2_8.EXP[i];
+    }
+  }
+
+  // The generator polynomial g(x) = (1 - α)(1 - α^2)...(1 - α^t)
+  generatorPoly() {
+    // Initialize g(x) = 1
+    let g = [0x01];
+    for (const root of this._generatorRoots()) {
+      // g(x) = g(x)*(x-root)
+      g = GF2_8.polyMul(g, [0x01, root]);
+    }
+    return g;
+  };
+
+
+  // Syndromes of r(x):
+  //   S_j = r(α^j) where α^j is a root of the generator g(x)
+  syndromes(r) {
+    let syndromes = [];
+    // Evaluate r(x) at each root of the generator.
+    for (const root of this._generatorRoots()) {
+      syndromes.push(GF2_8.polyEval(r, root));
+    }
+    return syndromes;
+  }
+
+  errorLocator(syndromes) {
+    let errLoc = [0x01];
+    let oldLoc = [0x01];
+
+    for (let i = 0; i < this._t; i++) {
+      let delta = GF2_8.polyMulAt(errLoc, syndromes, i);
+
+      // Multiply by x.
+      oldLoc = [...oldLoc, 0x00];
+
+      if (delta !== 0x00) {
+        if (oldLoc.length > errLoc.length) {
+            let newLoc = GF2_8.polyScale(oldLoc, delta);
+            oldLoc = GF2_8.polyScale(errLoc, GF2_8.div(1, delta));
+            errLoc = newLoc;
+        }
+        errLoc = GF2_8.polyAdd(errLoc, GF2_8.polyScale(oldLoc, delta));
+      }
+    }
+    // Drop leading zeros.
+    while (errLoc.length && errLoc[0] == 0x00) errLoc.unshift();
+    return errLoc;
+  }
+
+  // Determine the error positions by finding the roots of errLoc(x).
+  // By construction errLoc(x) = (1 - x*α^errPos_1)...(1 - x*α^errPos_ν)
+  // Where there are ν errors.
+  errorPositions(errLoc) {
+    let errPos = [];
+    // Evaluate errLoc(x) for every element of GF2_8.
+    for (let i = 0; i < GF2_8.SIZE; i++) {
+      if (GF2_8.polyEval(errLoc, i) === 0x00) {
+        // Found a root of errLoc.
+        // Calculate errPos such that: α^errPos = i^-1
+        errPos.push(GF2_8.LOG[GF2_8.div(1, i)])
+      }
+    }
+    return errPos;
+  }
+
+  // Determine if errPos are valid for a correctly decoded r(x).
+  errorPositionsValid(errPos, errLoc, r) {
+    // Ensure we found all the roots of errLoc.
+    if (errLoc.length - 1 != errPos.length) return false;
+    // Ensure each position is valid (within the message).
+    return errPos.every(p => p < r.length);
+  }
+
+  // Calculate the error evaluator (Ω) used in the Forney algorithm.
+  errorEvaluator(syndromes, errLoc) {
+    // Define the syndrome polynomial:
+    //   S(x) = S_1 + S_2 x + ... + S_t x^(t-1)
+    // Then Ω(x) = S(x)Λ(x) mod x^t
+
+    // Create S(x)
+    // This just means we must reverse the syndromes so that the first one is
+    // at the end of the array (in the constant term).
+    syndromes.reverse();
+    // S(x)Λ(x)
+    let mul = GF2_8.polyMul(syndromes, errLoc);
+    // Ensure syndromes is unchanged when we return.
+    syndromes.reverse();
+    // Mod out by x^t by taking the t coefficients of mul.
+    let result = mul.subarray(mul.length - this._t);
+    return result;
+  }
+
+  // Calculate the error polynomial e(x) using the Forney algorithm.
+  errorPolynomial(syndromes, errLoc, errPos) {
+    // Given the syndromes (S_j) and the error positions (i_k), we have a
+    // set of linear equations directly from the definition of a syndrome to
+    // solve for the error magnitudes e_{i_k}.
+    //   S_j = e_{i_1} (α^j)^(i_1) + ... + e_{i_ν} (α^j)^(i_ν)
+    // The Forney algorithm gives a closed form solution to this equation:
+    //   e_{i_k} = -Ω(1/X_k)/Λ'(1/(X_k))
+    //   where
+    //     X_k = α^(i_k)
+    //     Ω is the errorEvaluator (see this.errorEvaluator)
+    //     Λ' is the formal derivative of the errLoc Λ
+
+    // Ω: the error evaulator
+    let errEval = this.errorEvaluator(syndromes, errLoc);
+    // Λ': the formal derivative of Λ
+    let errLocDeriv = GF2_8.polyDeriv(errLoc);
+
+    // Initialize the result e(x) with enough space for the coefficients.
+    let errorPolynomial = new Uint8Array(Math.max(...errPos)+1);
+
+    // Solve for each error magnitude.
+    for (const pos of errPos) {
+      // 1/X_k = 1/α^(i_k)
+      let xInv = GF2_8.div(1, GF2_8.EXP[pos]);
+
+      let n = GF2_8.polyEval(errEval, xInv);
+      let d = GF2_8.polyEval(errLocDeriv, xInv);
+      // e_{i_k} = -Ω(1/X_k)/Λ'(1/(X_k))
+      // Note: in GF(2^8) the negative doesn't do anything.
+      let magnitude = GF2_8.div(n, d);
+
+      // Update e(x) since we now know e_{i_k} and i_k.
+      errorPolynomial[errorPolynomial.length-pos-1] = magnitude;
+    }
+
+    return errorPolynomial;
+  }
+
+  // Remove the t check symbols at the end of a codeword.
+  // In terms of the polynomials: floor(s(x) / x^t)
+  removeCheckSymbols(s) {
+    return s.subarray(0, s.length - this._t);
+  }
+
+  // Determine if r(x) is a valid codeword.
+  isValidCodeword(r) {
+    // Determine if all the syndromes of r(x) are 0.
+    // This means that r(x) is divisible by g(x).
+    return this.syndromes(r).every(s => s == 0x00);
+  }
+}
+
+// Arithmetic for elements and polynomials over GF(2^8), the finite field
+// (Galois field) with 256 elements.
+//
+// Elements of GF(2^8) themselves are polynomials over GF(2) and are
+// represented using a byte (a bit string of length 8). The least significant
+// bit is the constant term. e.g. 0x13 = 0b00010011 = z^4 + z + 1
+// Elements in GF(2^8) will be given by their hex values throughout this file.
+//
+// To be precise we define: GF(2^8) = GF(2)/(z^8+z^4+z^3+z^2+1).
+//
+// Polynomials are stored as arrays with with the lower order terms last.
+// So the constant term is at the end of the array.
+// e.g. [03, 04, 05] = 03x^2 + 04x + 05
 class GF2_8 {
-  static CHARACTERISTIC = 256;
+  // The number of elements in GF(2^8).
+  static SIZE = 256;
   // The primitive polynomial: z^8+z^4+z^3+z^2+1.
+  // This is required to uniquely define our field representation. We use it
+  // here in the definition of EXP.
+  // This is the primitive used for Rijndael's (AES) finite field.
   static PRIM = 0x11d;
-  static GENERATOR = 0x02;
   // Order of the generator. i.e. the number of non-zero elements.
   static ORDER = 255;
 
-  // Addition and subtraction (same).
+  // Addition and subtraction (the same operation in GF(2^8)).
+  // Addition of polynomial is pairwise addition of the components. The
+  // components are elements of GF(2) and addition is just XOR. Thus the
+  // addition of the polynomials is XOR of the bytes.
 
   static add(x, y) {
     return x ^ y;
@@ -21,78 +285,91 @@ class GF2_8 {
   }
 
   // Multiplication, division and power (using lookup tables).
-
+  // These are polynomial operations on the bit strings, and are made more
+  // efficient with the use of EXP and LOG lookup tables.
   static mul(x, y) {
-    if (x === 0 || y === 0) return 0;
+    if (x === 0x00 || y === 0x00) return 0x00;
+    // α^(log_α(x) + log_α(y))
     return this.EXP[(this.LOG[x] + this.LOG[y])%this.ORDER];
   }
 
   static div(x, y) {
-    if (x === 0) return 0;
+    if (x === 0x00) return 0x00;
+    // α^(log_α(x) - log_α(y))
     return this.EXP[(this.LOG[x] + this.ORDER - this.LOG[y])%this.ORDER];
   }
 
-  static pow(x, p) {
-    return this.EXP[(this.LOG[x] * p)%this.ORDER];
+  static pow(x, j) {
+    // α^(log_α(x) * j)
+    return this.EXP[(this.LOG[p] * j)%this.ORDER];
   }
 
   // Calculate lookup tables.
 
-  // EXP[i] = GENERATOR^i.
+  // EXP[i] = α^i.
   static EXP = (() => {
     let exp = new Uint8Array(this.ORDER);
 
-    for (let i = 0, x = 1; i < this.ORDER; i++) {
+    // Calculate each successive power of α.
+    for (let i = 0, x = 0x01; i < this.ORDER; i++) {
       exp[i] = x;
+      // x = x*α.
+      // This is polynomial multiplication where the coefficients are the bits.
+      // α = 0x02 = 0b10 = z. Multiplication by z is just shifting the
+      // coefficients, and hence the bits.
       x <<= 1;
-      if (x & this.CHARACTERISTIC) x = this.sub(x, this.PRIM);
+      // If x gets too large, then it needs be mapped back into an element of
+      // the field. We mod out by PRIM, as PRIM has been chosen such that the
+      // powers of α will reach all the non-zero elements.
+      // (For example, if we just used 256 or 255, then the powers of α would
+      // go to 0 or just loop over the values we've already seen.)
+      if (x >= this.SIZE) x = this.sub(x, this.PRIM);
     }
 
     return exp;
   })();
 
-  // LOG[GENERATOR^i] = i. Inverse of EXP.
+  // LOG[α^i] = i. Inverse of EXP.
   static LOG = (() => {
-    let log = new Uint8Array(this.CHARACTERISTIC);
-    for (let i = 0; i < this.CHARACTERISTIC; i++) {
+    let log = new Uint8Array(this.SIZE);
+    for (let i = 0; i < this.SIZE; i++) {
       log[this.EXP[i]] = i;
     }
     return log;
   })();
 
   // Polynomial functions.
-  //
-  // Polynomials are stored as arrays with with the lower order terms last.
-  // So the constant term is at the end of the array.
-  // e.g. [3, 4, 5] = 3x^2 + 4x + 5
 
-  // Evaluates p(x)
+  // Evaluate p(x)
   static polyEval(p, x) {
-    let y = p[0];
+    let y = p[0x00];
     for (let i = 1; i < p.length; i++) {
       y = this.add(this.mul(y, x), p[i]);
     }
     return y;
   }
 
-  // x*p where x is a scalar in GF2_8.
+  // x*p where x is an element in GF(2^8)
   static polyScale(p, x) {
+    // Scale each coefficient of p(x) element-wise.
     return p.map(a => this.mul(a, x));
   }
 
   // p+q
   static polyAdd(p, q) {
+    // Initialize r(x) = p(x)
     let r = new Uint8Array(Math.max(p.length, q.length));
-    for (let i = 0; i < p.length; i++) {
-      r[i + r.length - p.length] = p[i];
-    }
-    for (let i = 0; i < q.length; i++) {
-      r[i + r.length - q.length] ^= q[i];
+    r.set(p, r.length - p.length);
+
+    // Add q(x) to r(x) element-wise.
+    for (let i = 0, j=r.length-q.length; i < q.length; i++, j++) {
+      r[j] = this.add(r[j], q[i]);
     }
     return r;
   }
 
   // p-q
+  // In GF(2^8) this is the same as addition.
   static polySub(p, q) {
     return this.polyAdd(p, q);
   }
@@ -102,7 +379,8 @@ class GF2_8 {
     let r = new Uint8Array(p.length + q.length - 1);
     for (let j = 0; j < q.length; j++) {
       for (let i = 0; i < p.length; i++) {
-        r[i + j] ^= this.mul(p[i], q[j]);
+        r[i + j] = this.add(
+          r[i + j], this.mul(p[i], q[j]));
       }
     }
     return r;
@@ -110,9 +388,9 @@ class GF2_8 {
 
   // The coefficient of x^a of p*q
   static polyMulAt(p, q, a) {
-    let result = 0;
+    let result = 0x00;
     for (let i = 0; i < p.length; i++) {
-      result ^= GF2_8.mul(p[p.length-i-1], q[a-i] || 0);
+      result = this.add(result, GF2_8.mul(p[p.length-i-1], q[a-i] || 0x00));
     }
     return result;
   }
@@ -122,11 +400,11 @@ class GF2_8 {
     let r = new Uint8Array(p);
     let resultLen = p.length - q.length + 1;
 
+    // Calculate p/q using synthetic division.
     for (let i = 0; i < resultLen; i++) {
-      if (r[i] === 0) continue;
+      if (r[i] === 0x00) continue;
       for (let j = 1; j < q.length; j++) {
-        if (q[j] === 0) continue
-        r[i + j] ^= this.mul(q[j], r[i]);
+        r[i + j] = this.add(r[i + j], this.mul(q[j], r[i]));
       }
     }
 
@@ -145,122 +423,5 @@ class GF2_8 {
       r[i] = p[i];
     }
     return r;
-  }
-}
-
-class ReedSolomon {
-  constructor(nsym) {
-    this._nsym = nsym;
-    this._gen = this.generatorPoly();
-  }
-
-  generatorPoly() {
-    let g = [1];
-    for (let i = 0; i < this._nsym; i++) {
-      g = GF2_8.polyMul(g, [1, GF2_8.EXP[i+1]]);
-    }
-    return g;
-  };
-
-  encodeString(msg) {
-    let utf8Msg = (new TextEncoder()).encode(msg);
-    return this.encode(utf8Msg);
-  }
-
-  encode(msg) {
-    let dividend = new Uint8Array(msg.length + this._nsym);
-    dividend.set(msg);
-    let [p, q] = GF2_8.polyDiv(dividend, this._gen);
-
-    return new Uint8Array([...msg, ...q]);
-  }
-
-  syndromes(msg) {
-    let synd = new Uint8Array(this._nsym);
-    for (let i = 0; i < this._nsym; i++) {
-      synd[i] = GF2_8.polyEval(msg, GF2_8.EXP[i+1])
-    }
-    return synd;
-  }
-
-  errorLocator(synd) {
-    let errLoc = [1];
-    let oldLoc = [1];
-
-    for (let i = 0; i < this._nsym; i++) {
-      let delta = GF2_8.polyMulAt(errLoc, synd, i);
-
-      // Multiply by x.
-      oldLoc = [...oldLoc, 0];
-
-      if (delta !== 0) {
-        if (oldLoc.length > errLoc.length) {
-            let newLoc = GF2_8.polyScale(oldLoc, delta);
-            oldLoc = GF2_8.polyScale(errLoc, GF2_8.div(1, delta));
-            errLoc = newLoc;
-        }
-        errLoc = GF2_8.polyAdd(errLoc, GF2_8.polyScale(oldLoc, delta));
-      }
-    }
-    // Drop leading zeros.
-    while (errLoc.length && errLoc[0] == 0) errLoc.unshift();
-    return errLoc;
-  }
-
-  errorPositions(errLoc) {
-    let positions = [];
-    for (let i = 0; i < GF2_8.ORDER; i++) {
-      if (GF2_8.polyEval(errLoc, i) === 0) {
-        positions.push(GF2_8.LOG[GF2_8.div(1, i)])
-      }
-    }
-    return positions;
-  }
-
-  errorEvaluator(synd, errLoc) {
-    synd.reverse();
-    let mul = GF2_8.polyMul(synd, errLoc);
-    synd.reverse();  // Keep synd unchanged.
-    let result = mul.subarray(mul.length - this._nsym);
-    return result;
-  }
-
-  errorPolynomial(synd, errLoc, errPos) {
-    let errEval = this.errorEvaluator(synd, errLoc);
-    let errLocDeriv = GF2_8.polyDeriv(errLoc);
-
-    let errorPolynomial = new Uint8Array(Math.max(...errPos)+1);
-
-    for (const pos of errPos) {
-      let xInv = GF2_8.div(1, GF2_8.EXP[pos]);
-
-      let n = GF2_8.polyEval(errEval, xInv);
-      let d = GF2_8.polyEval(errLocDeriv, xInv);
-      let magnitude = GF2_8.div(n, d);
-
-      errorPolynomial[errorPolynomial.length-pos-1] = magnitude;
-    }
-
-    return errorPolynomial;
-  }
-
-  applyError(msg, errorPolynomial) {
-    let corrected = GF2_8.polySub(msg, errorPolynomial);
-    return this.removeCheckSymbols(corrected);
-  }
-
-  removeCheckSymbols(msg) {
-    return msg.subarray(0, msg.length - this._nsym);
-  }
-
-  isValidCodeword(msg) {
-    return this.syndromes(msg).every(s => s == 0);
-  }
-
-  errorPositionsValid(errPos, errLoc, msg) {
-    // Ensure we found all the roots of errLoc.
-    if (errLoc.length - 1 != errPos.length) return false;
-    // Ensure each position is valid.
-    return errPos.every(p => p < msg.length);
   }
 }

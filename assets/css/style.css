@@ -3,6 +3,13 @@ body {
   font-size: small;
 }
 
+#overview {
+  font-size: medium;
+}
+#overview p {
+  margin: 1em 0px;
+}
+
 .container {
   width: 90%;
   margin: 0 auto;
@@ -31,7 +38,7 @@ p, #main_content > * {
   width: 90%;
 }
 
-#corruptor {
+#corrupter {
   font-size: small;
   margin-left: -4px;
 }
@@ -91,7 +98,7 @@ h2,#configuration,blockquote,#overview,.notice {
   background-color: #ffd2d2;
 }
 
-#reset-corruptor {
+#reset-corrupter {
   padding: 0px 5px;
 }
 
