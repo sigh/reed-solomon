@@ -1,8 +1,9 @@
 const initPage = () => {
   let input = document.getElementById('message-input');
   let corruptor = new Corrupter();
+  let configuration = new Configuration();
 
-  let display = new AlgorithmDisplay(corruptor);
+  let display = new AlgorithmDisplay(corruptor, configuration);
 
   input.oninput = (e => display.updateMessage(input.value));
   input.oninput();
@@ -101,12 +102,17 @@ const setUpVisibilityOptions = () => {
 };
 
 class AlgorithmDisplay {
-  constructor(corruptor) {
+  constructor(corruptor, configuration) {
+    this._currentMessage = null;
+
     this._corruptor = corruptor;
     this._corruptor.addEventListener('change', (e) => {
       this.messageReceived(e.detail);
     });
-    this._rs = new ReedSolomon(10);
+    this._configuration = configuration;
+    this._configuration.addEventListener('change', (e) => {
+      this.updateMessage(this._currentMessage);
+    });
 
     this._elements = {
       utf8In: document.getElementById('message-utf8'),
@@ -123,6 +129,7 @@ class AlgorithmDisplay {
       decodedMessage: document.getElementById('decoded-message'),
       receivedPolyGood: document.getElementById('received-poly-good'),
       receivedPolyUnfixable: document.getElementById('received-poly-unfixable'),
+      tooLong: document.getElementById('message-too-long'),
       nu: document.getElementById('nu'),
     };
 
@@ -224,12 +231,30 @@ class AlgorithmDisplay {
   }
 
   updateMessage(msg) {
-    let rs = this._rs;
+    this._currentMessage = msg;
 
-    // Encoding phase.
+    let rs = this._configuration.getCodec();
+    const fixedK = this._configuration.getK();
+    const maxK = this._configuration.getMaxK();
+
+    // Read and validate the input.
 
     let msgUtf8 = (new TextEncoder()).encode(msg);
+    if (msgUtf8.length > maxK) {
+      msgUtf8 = msgUtf8.subarray(0, maxK);
+      this._elements.tooLong.style.display = null;
+    } else {
+      this._elements.tooLong.style.display = 'none';
+    }
+
+    if (msgUtf8.length < fixedK) {
+      msgUtf8 = new Uint8Array(fixedK);
+      (new TextEncoder()).encodeInto(msg, msgUtf8);
+    }
+
     this._displayBytes(this._elements.utf8In, msgUtf8);
+
+    // Encoding phase.
 
     this._displayPolynomial(this._elements.polyIn, msgUtf8);
 
@@ -240,7 +265,7 @@ class AlgorithmDisplay {
   }
 
   messageReceived(received) {
-    let rs = this._rs;
+    let rs = this._configuration.getCodec();
 
     this._displayBytes(this._elements.received, received);
     this._displayPolynomial(this._elements.polyRec, received);
@@ -376,5 +401,72 @@ class Corrupter extends EventTarget {
 
   getBytes() {
     return this._originalBytes;
+  }
+}
+
+class Configuration extends EventTarget {
+  constructor() {
+    super();
+    this._tElem = document.getElementById('t-input');
+    this._kElem = document.getElementById('k-input');
+    this._kElem = document.getElementById('k-input');
+
+    this._generator = document.getElementById('generator-poly');
+
+    this._tElem.onchange = () => {
+      if (this._setT()) {
+        this.dispatchEvent(new CustomEvent("change"));
+      }
+    }
+
+    this._kElem.onchange = () => {
+      if (this._setK()) {
+        this.dispatchEvent(new CustomEvent("change"));
+      }
+    }
+
+    this._setT();
+    this._setK();
+  }
+
+  _updateGeneratorPoly() {
+    let poly = this._encoder.generatorPoly();
+    let parts = [];
+    for (let i = 0; i < poly.length; i++) {
+      let deg = poly.length-i-1;
+      let val = toTexHexString(poly[i]);
+      if (deg > 0) val += 'x';
+      if (deg > 1) val += `^{${deg}}`;
+      parts.push(val);
+    }
+    let tex = '\\(' + parts.join(' + ') + '\\)';
+    this._generator.textContent = tex;
+    MathJax.typeset([this._generator]);
+  }
+
+  _setT() {
+    this._t = +this._tElem.value;
+    this._kElem.setAttribute('max', GF2_8.ORDER - this._k);
+    this._encoder = new ReedSolomon(+this._t);
+    this._updateGeneratorPoly();
+    return this._t + this._k <= GF2_8.ORDER;
+  }
+
+  _setK() {
+    this._tElem.setAttribute('max', GF2_8.ORDER - this._t);
+    this._k = +this._kElem.value || 0;
+    return this._t + this._k <= GF2_8.ORDER;
+  }
+
+  getCodec() {
+    return this._encoder;
+  }
+
+  getK() {
+    return this._k;
+  }
+
+  getMaxK() {
+    return this._k ? this._k : GF2_8.ORDER - this._t;
   }
 }

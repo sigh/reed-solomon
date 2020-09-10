@@ -151,12 +151,12 @@ class GF2_8 {
 class ReedSolomon {
   constructor(nsym) {
     this._nsym = nsym;
-    this._gen = this.generatorPoly(nsym);
+    this._gen = this.generatorPoly();
   }
 
-  generatorPoly(nsym) {
+  generatorPoly() {
     let g = [1];
-    for (let i = 0; i < nsym; i++) {
+    for (let i = 0; i < this._nsym; i++) {
       g = GF2_8.polyMul(g, [1, GF2_8.EXP[i+1]]);
     }
     return g;

@@ -16,33 +16,41 @@ title: Reed-Solomon Error Correction
 
 <div id="configuration" markdown=1>
 
-  <span class="clarification">
-  The encoder and decoder need to agree on all these configuration parameters.
-  </span>
+  > The encoder and decoder need to agree on all configuration parameters.
 
-  Number of check symbols \\(t = \\) <input type="number" value="10">
+  Number of check symbols \\(t = \\)
+  <input type="number" id="t-input" value="5" min=1 max=255>
+  Fix message size (optional) \\(k = \\)
+  <input type="number" id="k-input" value="" min=0 max=255>  
+  <span class="clarification">
+  \\(n = t + k\\) must be less than \\(256\\) - the number of elements in our
+  field.
+  </span>
 
   [Field](https://en.wikipedia.org/wiki/Finite_field): \\( GF(2^8) \\)  
   <span class="clarification">
   The symbols of the code.
   We could encode into another finite field but \\(GF(2^8)\\) maps nicely to
-  bytes.
+  bytes.  
+  Note: Elements in \\(GF(2^8)\\) will be represented as hex values to
+  differentiate them from normal integers.
   </span>
 
   Generator element: \\(\\alpha = \\texttt{02}\\)  
  <span class="clarification">
   An element in \\( GF(2^8) \\) whose powers generate all non-zero elements.
-  i.e. \\( GF(2^8) = \\{0, 1, \alpha, \alpha^2, \alpha^3, ...\\} \\)
+  i.e. \\( GF(2^8) = \\{\\texttt{00}, \\texttt{01}, \alpha, \alpha^2, \alpha^3, ...\\} \\)
   </span>
 
   [Primitive polynomial](
   https://en.wikipedia.org/wiki/Primitive_polynomial_(field_theory)):
   \\(z^8+z^4+z^3+z^2+1 = \\texttt{0x11d} \\)  
   <span class="clarification">
-  Used to multiply field elements
+  Used to multiply field elements.
   </span>
 
-  Generator polynomial: \\( g(x) = \\prod_{j=1}^{t} (x - \\alpha^j) \\)
+  Generator polynomial: \\( g(x) = \\prod_{j=1}^{t} (x - \\alpha^j) = \\)
+  <span id="generator-poly"></span>
 
 </div>
 
@@ -55,6 +63,10 @@ Message \\(m\\)
 > First the message must be encoded as a sequence of bytes.
 > Here the input string is
 > [UTF-8](https://en.wikipedia.org/wiki/UTF-8) encoded.
+
+<div class="notice error-notice" id="message-too-long">
+Message was truncated because it is too long.
+</div>
 
 Bytes \\([a_k, \\cdots, a_1] = \\text{utf8}(m) \\)
 

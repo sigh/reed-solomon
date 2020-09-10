@@ -94,3 +94,7 @@ h2,#configuration,blockquote,#overview,.notice {
 #reset-corruptor {
   padding: 0px 5px;
 }
+
+input:invalid {
+  background: #faa;
+}
