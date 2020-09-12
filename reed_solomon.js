@@ -38,13 +38,13 @@ class ReedSolomon {
     return s;
   }
 
-  // Reed-Solomon encode a string, using the UTF-8 byte respresentation.
+  // Reed-Solomon encode a string, using the UTF-8 byte representation.
   encodeString(msgStr) {
     let utf8Msg = (new TextEncoder()).encode(msgStr);
     return this.encode(utf8Msg);
   }
 
-  // Decode a recieved byte array.
+  // Decode a received byte array.
   // Throws an error if it could not be decoded.
   decode(r) {
     // Syndromes S_j of r(x): evaluate r(x) at each root of g(x).
@@ -88,7 +88,7 @@ class ReedSolomon {
     return decoded;
   }
 
-  // Decode a recieved byte array, and return the UTF-8 string it encodes.
+  // Decode a received byte array, and return the UTF-8 string it encodes.
   decodeStr(r) {
     let decoded = this.decode(r);
     // Decode UTF-8 encoded bytes.
@@ -127,28 +127,57 @@ class ReedSolomon {
     return syndromes;
   }
 
+  // Determine the error locator Λ(x) using the Berlekamp–Massey algorithm.
   errorLocator(syndromes) {
+    // Comments will note the correspondence to the original paper:
+    // Massey, J. L. (January 1969), "Shift-register synthesis and BCH decoding"
+    // PDF: http://crypto.stanford.edu/~mironov/cs359/massey.pdf
+
+    // errLoc is C(D) in the paper. Initialized to 1.
     let errLoc = [0x01];
+    // oldLoc is b^-1 * D^x * B(D) in the paper.
+    // Initialized to 1 (B(D) = 1, x = 0, b = 1).
     let oldLoc = [0x01];
+    // L in the paper (number of errors).
+    let l = 0;
 
     for (let i = 0; i < this._t; i++) {
+      // The original paper had d = S[N] + sum(errLoc[i]*S[N-i])
+      // This is the same calculation.
       let delta = GF2_8.polyMulAt(errLoc, syndromes, i);
 
-      // Multiply by x.
+      // In the paper x + 1 → x.
+      // These are common to steps 3, 4, and 5 so is done once here.
       oldLoc = [...oldLoc, 0x00];
 
       if (delta !== 0x00) {
-        if (oldLoc.length > errLoc.length) {
-            let newLoc = GF2_8.polyScale(oldLoc, delta);
-            oldLoc = GF2_8.polyScale(errLoc, GF2_8.div(1, delta));
-            errLoc = newLoc;
+        // Check 2L > N. (also equivalent to errLoc.length >= oldLoc.length)
+        if (2*l > i) {
+          // Step 4 in the paper.
+          // C(D) - d * b^-1 * D^x * B(D) → C(D)
+          errLoc = GF2_8.polySub(errLoc, GF2_8.polyScale(oldLoc, delta));
+        } else {
+          // Step 5 in the paper.
+
+          // C(D) → T(D)
+          let tempLoc = errLoc;
+          // C(D) - d * b^-1 * D^x * B(D) → C(D)
+          errLoc = GF2_8.polySub(errLoc, GF2_8.polyScale(oldLoc, delta));
+          // Combines:
+          //   T(D) → B(D); d → b; x → 1
+          //   (This is effectively x → 0. The increment of x will happen in
+          //    the next iteration).
+          oldLoc = GF2_8.polyScale(tempLoc, GF2_8.div(1, delta));
+          // N + 1 - L → L
+          l = i + 1 - l;
         }
-        errLoc = GF2_8.polyAdd(errLoc, GF2_8.polyScale(oldLoc, delta));
       }
     }
-    // Drop leading zeros.
-    while (errLoc.length && errLoc[0] == 0x00) errLoc.unshift();
-    return errLoc;
+
+    // We have l errors, thus l+1 coefficients in errLoc.
+    // Trim errLoc down to just the required coefficients (equivalent to
+    // trimming the leading zeros).
+    return errLoc.subarray(errLoc.length - l - 1)
   }
 
   // Determine the error positions by finding the roots of errLoc(x).
@@ -206,10 +235,14 @@ class ReedSolomon {
     //     X_k = α^(i_k)
     //     Ω is the errorEvaluator (see this.errorEvaluator)
     //     Λ' is the formal derivative of the errLoc Λ
+    //
+    // Original paper: Forney, G. (October 1965), "On Decoding BCH Codes"
+    // I couldn't access the paper, but see derivation at:
+    // https://web.archive.org/web/20140630172526/http://web.stanford.edu/class/ee387/handouts/notes7.pdf
 
-    // Ω: the error evaulator
+    // Ω(x): the error evaluator
     let errEval = this.errorEvaluator(syndromes, errLoc);
-    // Λ': the formal derivative of Λ
+    // Λ'(x): the formal derivative of Λ(x)
     let errLocDeriv = GF2_8.polyDeriv(errLoc);
 
     // Initialize the result e(x) with enough space for the coefficients.
