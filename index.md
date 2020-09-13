@@ -183,7 +183,8 @@ Corrupter
 <input type="button" id="reset-corrupter" value="Reset">
 
 <div>
-  <input type="text" class="bytes" id="corrupter" size=20>
+  <input type="text" class="bytes" id="corrupter" size=20
+   value="00 6F 00 00 00 00 00 00 00 00 00 00 00 FF 00 00">
   <br>
   <span class="clarification">
   Change the text to corrupt the message in transit!

@@ -42,6 +42,9 @@ p, #main_content > * {
   font-size: small;
   margin-left: -4px;
 }
+.corrupted-byte {
+  background: #faa;
+}
 .bad-input {
   background: inherit;
   animation-name: bad-input-animation;

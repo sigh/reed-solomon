@@ -120,7 +120,6 @@ class AlgorithmDisplay {
       checkPoly: document.getElementById('check-poly'),
       encodedPoly: document.getElementById('encoded-poly'),
       encoded: document.getElementById('message-encoded'),
-      received: document.getElementById('received-encoded'),
       polyRec: document.getElementById('received-poly'),
       syndromes: document.getElementById('syndromes'),
       errorLocator: document.getElementById('error-locator'),
@@ -276,7 +275,6 @@ class AlgorithmDisplay {
 
     this._elements.receivedPolyUnfixable.style.display = 'none';
 
-    this._displayBytes(this._elements.received, received);
     this._displayPolynomial(this._elements.polyRec, received);
 
     let syndromes = rs.syndromes(received);
@@ -334,23 +332,27 @@ class Corrupter extends EventTarget {
   constructor() {
     super();
 
-    let elem = document.getElementById('corrupter');
+    let input = document.getElementById('corrupter');
     let reset = document.getElementById('reset-corrupter');
 
-    this._elem = elem;
-    this._originalBytes = new Uint8Array();
-    this._corruptedBytes = new Uint8Array();
+    this._input = input;
+    this._receivedDisplay = document.getElementById('received-encoded');
     this._prev = '';
-    this._callback = null;
+    // Initialize corrupted and original bytes, such that we can initialize the
+    // page with corruption. Corrputed bytes should be non-zero where a
+    // corruption is wanted.
+    this._corruptedBytes = new Uint8Array(
+      input.value.split(' ').map(v => parseInt(v||'0', 16)));
+    this._originalBytes = new Uint8Array(this._corruptedBytes.length);
 
     // Valid bytes strings are space separated. The bytes can be empty, one
     // or two characters to allow for intuitive editing.
     const validRe = /^(|[a-f\d]{1,2})$/i;
 
-    elem.oninput = () => {
-      const value = elem.value;
-      const start = elem.selectionStart;
-      const end = elem.selectionEnd;
+    input.oninput = () => {
+      const value = input.value;
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
 
       const parts = value.split(' ');
       const isValid = parts.length <= this._originalBytes.length &&
@@ -361,12 +363,12 @@ class Corrupter extends EventTarget {
         // the start of the selection.
         const offset = Math.max(0, value.length - this._prev.length);
 
-        elem.value = this._prev;
-        elem.selectionStart = start - offset;
-        elem.selectionEnd = end - offset;
+        input.value = this._prev;
+        input.selectionStart = start - offset;
+        input.selectionEnd = end - offset;
         // Flash background to indicate the input was an error.
-        elem.classList.add('bad-input');
-        elem.onanimationend = () => elem.classList.remove('bad-input');
+        input.classList.add('bad-input');
+        input.onanimationend = () => input.classList.remove('bad-input');
         return;
       }
 
@@ -380,11 +382,32 @@ class Corrupter extends EventTarget {
     }
   }
 
-  _setCorruptedBytes(bytes) {
-    // Ensure corruption doesn't change the length;
-    while (bytes.length < this._originalBytes.length) bytes.push(0);
+  _displayReceivedBytes() {
+    let bytes = this._corruptedBytes;
+    let display = this._receivedDisplay;
+    display.textContent = '';
 
+    for (let i = 0; i < bytes.length; i++) {
+      if (i > 0) display.appendChild(document.createTextNode(' '));
+
+      let textNode = document.createTextNode(toHexString(bytes[i]));
+
+      if (bytes[i] !== this._originalBytes[i]) {
+        let span = document.createElement('span');
+        span.className = 'corrupted-byte';
+        span.appendChild(textNode);
+        display.appendChild(span);
+      } else {
+        display.appendChild(textNode);
+      }
+    }
+  }
+
+  _setCorruptedBytes(bytes) {
+    // Ensure corruption doesn't change the length.
+    while (bytes.length < this._originalBytes.length) bytes.push(0);
     this._corruptedBytes = new Uint8Array(bytes);
+    this._displayReceivedBytes();
     this.dispatchEvent(
       new CustomEvent("change", {detail: this._corruptedBytes}));
   }
@@ -400,14 +423,14 @@ class Corrupter extends EventTarget {
 
     this._setValueFromBytes(newCorruptedBytes);
     this._originalBytes = bytes;
-    this._elem.setAttribute('size', bytes.length*3+1);
+    this._input.setAttribute('size', bytes.length*3+1);
 
     this._setCorruptedBytes(newCorruptedBytes);
   }
 
   _setValueFromBytes(bytes) {
-    this._elem.value = [...bytes].map(toHexString).join(' ');
-    this._prev = this._elem.value;
+    this._input.value = [...bytes].map(toHexString).join(' ');
+    this._prev = this._input.value;
   }
 
   getBytes() {
