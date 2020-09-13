@@ -4,6 +4,7 @@ title: Reed-Solomon Error Correction
 ---
 
 <div id="overview" markdown=1>
+
   This is an interactive demo of
   [Reed-Solomon](https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction)
   error correction.
@@ -154,8 +155,8 @@ $$ p(x) = \sum_{j=1}^k a_j x^{j-1} $$
 >> or [synthetic division](https://en.wikipedia.org/wiki/Synthetic_division)
 >> will also give the remainder.
 >>
->> Then $$ s(x) = p(x) \cdot x^t - s_r(x) $$ is divisible by $$ g(x) $$ and thus
->> is a valid codeword.
+> Now $$ s(x) = p(x) \cdot x^t - s_r(x) $$ is divisible by $$ g(x) $$ and thus
+> is a valid codeword.
 
 <span>
 $$ s_r(x) = p(x) \cdot x^t $$
@@ -242,38 +243,39 @@ All $$ S_j\ = 0 $$, thus $$ e(x) = 0 $$.
 
 <!-- start:fix-errors -->
 
->  Note that
->  $$ 
->    S_j = e(\alpha^j)
->        = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k}
->        = \sum_{k=1}^{\nu} e_{i_k} X_k^j
->  $$
-> where $$ X_k = \alpha^{i_k} $$
+> $$ S_1 \cdots S_t $$ define a set of equations where
+> $$ i_k $$ and $$ e_{i_k} $$ are unknown:
+>>  $$
+>>    S_j = e(\alpha^j)
+>>        = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k}
+>>        = \sum_{k=1}^{\nu} e_{i_k} X_k^j
+>>  $$
+>> where $$ X_k = \alpha^{i_k} $$
 >
-> Thus $$ S_1 \cdots S_t $$ define a set of equations where
-> $$ i_k $$ and $$ e_{i_k} $$ are unknown.
 > Unfortunately, this set of equations is not linear (i.e. hard to solve) and
-> we don't even know *how many* equations there are.
->
+> we don't even know *how many* unknowns there are.
 > We want to convert this to a set of linear equations:
 >
->> Define the _error locator_ polynomial
+>> Define the _error locator_ $$ \Lambda(x) $$ as a polynomial which has a root
+>> at each $$ X_k^{-1} $$:
 >> $$ \Lambda(x) = \prod_{k=1}^\nu (1 - x X_k ) = 1 + \Lambda_1 x^1 + \Lambda_2 x^2 + \cdots + \Lambda_\nu x^\nu $$
 >>
 >> Combining with $$ S_j $$ we can
 >> [derive](https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction#Error_locator_polynomial)
 >> a system of $$ \nu $$ linear equations:
 >> $$ S_j \Lambda_{\nu} + S_{j+1}\Lambda_{\nu-1} + \cdots + S_{j+\nu-1} \Lambda_1 = - S_{j + \nu} $$
->> for $$ 1 \leq j \leq v $$
+>> for $$ 1 \leq j \leq \nu $$
 >>
->> If we knew $$ \nu $$ we could solve this directly, but we don't.
->> We can still solve this by trying values of $$ \nu $$ until we find one
->> for which the system is solvable - this is the method used by the
->> _PGZ decoder_.
->>
->> The [Berlekamp-Massey algorithm](https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm)
->> will more efficiently find both $$ \nu $$ and the solution, assuming that
->> there are at most $$ t/2 $$ errors.
+>> Note that this requires us to have $$ 2\nu $$ syndromes. Hence, we can only
+>> solve for $$ t/2 $$ errors as we have $$ t $$ syndromes.
+>
+> If we knew $$ \nu $$ we could solve this directly, but we don't.
+> We can still solve this by trying values of $$ \nu $$ (from the highest down)
+> until we find one for which the system is solvable --- this is the method
+> used by the _PGZ decoder_.
+>
+> The [Berlekamp-Massey algorithm](https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm)
+> will more efficiently find both $$ \nu $$ and the solution.
 
 <div markdown=1>
 Error locator $$ \Lambda(x) = \prod_{k=1}^\nu (1 - x X_k ) $$
@@ -368,5 +370,4 @@ $$ m' = \text{utf8}^{-1}([a'_k, \cdots, a'_1]) $$
 <!-- end:fixable-message -->
 
 <div class="notice error-notice " id="received-poly-unfixable" markdown=1>
-There are more than $$ t/2 $$ errors. The message was not recovered.
 </div>

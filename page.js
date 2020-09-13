@@ -142,6 +142,7 @@ class AlgorithmDisplay {
     this._typesetElements = [
       this._elements.syndromes,
       this._elements.positions,
+      this._elements.receivedPolyUnfixable,
     ];
 
     this.updateMessage = deferUntilAnimationFrame(this.updateMessage.bind(this));
@@ -271,6 +272,23 @@ class AlgorithmDisplay {
     this._corrupter.setBytes(encoded);
   }
 
+  _setFailureMessage(elem, errPos, errLoc, r) {
+    let message = 'Unknown error.';
+
+    const expectedNumErrors = errLoc.length - 1;
+    if (expectedNumErrors != errPos.length) {
+      message = `
+        \\( \\Lambda(x) \\) should have ${expectedNumErrors} distinct roots but
+        we found ${errPos.length}.`;
+    } else if (Math.max(...errPos) >= r.length) {
+      message = `
+        To recover the message because we would need to add terms outside the
+        message. This could be because bytes were shifted.`;
+    }
+
+    elem.textContent = 'The message was not recovered: ' + message;
+  }
+
   messageReceived(received) {
     let rs = this._configuration.getCodec();
 
@@ -304,6 +322,8 @@ class AlgorithmDisplay {
       if (!rs.errorPositionsValid(errPos, errLoc, received)) {
         setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', true);
         this._elements.receivedPolyUnfixable.style.display = null;
+        this._setFailureMessage(
+          this._elements.receivedPolyUnfixable, errPos, errLoc, received);
         MathJax.typeset(this._typesetElements);
         return;
       } else {

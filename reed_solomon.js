@@ -218,7 +218,7 @@ class ReedSolomon {
     // Ensure we found all the roots of errLoc.
     if (errLoc.length - 1 != errPos.length) return false;
     // Ensure each position is valid (within the message).
-    return errPos.every(p => p < r.length);
+    return Math.max(...errPos) < r.length;
   }
 
   // Calculate the error evaluator (Ω) used in the Forney algorithm.
