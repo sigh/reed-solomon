@@ -10,6 +10,9 @@
 // Borrows parts of the implementation from:
 // https://en.wikiversity.org/wiki/Reed%E2%80%93Solomon_codes_for_coders
 
+// Exception thrown if a message cannot be decoded.
+class ReedSolomonException extends Error {}
+
 // Reed-Solomon codec for a given number of check symbols.
 // When `t` check symbols are used, it can detect up to `t` errors and correct
 // up to `t/2` errors can be corrected.
@@ -44,52 +47,60 @@ class ReedSolomon {
     return this.encode(utf8Msg);
   }
 
-  // Decode a received byte array.
-  // Throws an error if it could not be decoded.
-  decode(r) {
+  // Repair errors in a received byte array.
+  // The output will still have the check symbols.
+  // Throws a ReedSolomonException if it could not be repaired.
+  repair(r) {
     // Syndromes S_j of r(x): evaluate r(x) at each root of g(x).
     let syndromes = this.syndromes(r);
 
     // If all the syndromes are zero then the codeword is valid, since all
     // the roots of g(x) must also be roots of r(x).
-    let isValidCodeword = syndromes(r).every(s => s == 0x00);
+    let isValidCodeword = syndromes.every(s => s == 0x00);
 
-    let recovered;
     if (isValidCodeword) {
       // The codeword is valid, so there is nothing to fix.
-      recovered = r;
-    } else {
-      // We have some errors, so try to fix them.
-
-      // Find the error locator Λ(x) which has a root for each error position.
-      let errLoc = this.errorLocator(syndromes);
-
-      // Find the error positions i_k by finding the roots of Λ(x).
-      let errPos = this.errorPositions(errLoc);
-
-      // If we could not find all the roots of errLoc, then we can't decode
-      // the message.
-      if (!this.errorPositionsValid(errPos, errLoc, r)) {
-        throw new Error('Could not decode message. Too many errors.');
-      }
-
-      // Given the location of the errors, solve for the error magnitudes,
-      // and thus determine the error polynomial e(x).
-      let e = this.errorPolynomial(syndromes, errLoc, errPos);
-
-      // Apply the error e(x) to the received message to recover our codeword.
-      // recovered s(x) = r(x) - e(x)
-      recovered = GF2_8.polySub(r, e);
+      return r;
     }
 
-    // Remove the check symbols from the end of the codeword.
-    let decoded = this.removeCheckSymbols(recovered);
+    // We have some errors, so try to fix them.
 
+    // Find the error locator Λ(x) which has a root for each error position.
+    let errLoc = this.errorLocator(syndromes);
+
+    // Find the error positions i_k by finding the roots of Λ(x).
+    let errPos = this.errorPositions(errLoc);
+
+    // If we could not find all the roots of errLoc, then we can't decode
+    // the message.
+    if (!this.errorPositionsValid(errPos, errLoc, r)) {
+      throw new ReedSolomonException(
+        'Could not decode message. Too many errors.');
+    }
+
+    // Given the location of the errors, solve for the error magnitudes,
+    // and thus determine the error polynomial e(x).
+    let e = this.errorPolynomial(syndromes, errLoc, errPos);
+
+    // Apply the error e(x) to the received message to recover our codeword.
+    // repaired s(x) = r(x) - e(x)
+    let repaired = GF2_8.polySub(r, e);
+
+    return repaired;
+  }
+
+  // Decode a received byte array.
+  // Throws a ReedSolomonException if it could not be decoded.
+  decode(r) {
+    let repaired = this.repair(r);
+    // Remove the check symbols from the end of the codeword.
+    let decoded = this.removeCheckSymbols(repaired);
     return decoded;
   }
 
   // Decode a received byte array, and return the UTF-8 string it encodes.
-  decodeStr(r) {
+  // Throws a ReedSolomonException if it could not be decoded.
+  decodeToString(r) {
     let decoded = this.decode(r);
     // Decode UTF-8 encoded bytes.
     let decodedMessage = (new TextDecoder()).decode(decoded);
@@ -458,3 +469,74 @@ class GF2_8 {
     return r;
   }
 }
+
+// Some simple test cases to very that everything is not horribly broken.
+const runTests = () => {
+  const goodCases = [
+    {
+      input: "",
+      corruption: {},
+    },
+    {
+      input: "hello world 1",
+      corruption: {},
+    },
+    {
+      input: "hello world 2",
+      corruption: {5: 0x00, 14: 0x33},  // Less than t/2 errors.
+    }
+  ];
+
+  const badCases = [
+    {
+      input: "",
+      corruption: {0: 0x01, 3: 0x03, 4: 0x04},
+    },
+    {
+      input: "hello world 1",
+      // Less than t errors, but more than t/2.
+      corruption: {5: 0x00, 14: 0x33, 16: 0x00},
+    },
+    {
+      input: "hello world 2",
+      // t errors.
+      corruption: {0: 0x01, 5: 0x00, 9:0x12, 14: 0x33, 16: 0x00},
+    },
+    {
+      input: "hello world 3",
+      // More than t errors.
+      corruption: {0: 0x01, 1: 0x02, 5: 0x00, 9:0x12, 14: 0x33, 16: 0x00},
+    }
+  ];
+
+  let rs = new ReedSolomon(5);
+
+  // Encode then decode string.
+  const processTestInput = (test) => {
+    let encoded = rs.encodeString(test.input);
+    for (const [pos, v] of Object.entries(test.corruption)) {
+      encoded[pos] = v;
+    }
+    let decoded = rs.decodeToString(encoded);
+    return decoded;
+  };
+
+  for (const test of goodCases) {
+    let decoded = processTestInput(test);
+    if (decoded != test.input) {
+      throw 'Good test failed: ' + test.input;
+    }
+  }
+
+  for (const test of badCases) {
+    try {
+      let decoded = processTestInput(test);
+      throw 'Expected an error';
+    } catch (e) {
+      if (!(e instanceof ReedSolomonException)) {
+        throw 'Bad test failed: ' + test.input;
+      }
+    }
+  }
+  console.log('All tests pass');
+};
