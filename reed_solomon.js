@@ -74,8 +74,7 @@ class ReedSolomon {
     // If we could not find all the roots of errLoc, then we can't decode
     // the message.
     if (!this.errorPositionsValid(errPos, errLoc, r)) {
-      throw new ReedSolomonException(
-        'Could not decode message. Too many errors.');
+      throw new ReedSolomonException('Could not decode message.');
     }
 
     // Given the location of the errors, solve for the error magnitudes,
@@ -85,6 +84,13 @@ class ReedSolomon {
     // Apply the error e(x) to the received message to recover our codeword.
     // repaired s(x) = r(x) - e(x)
     let repaired = GF2_8.polySub(r, e);
+
+    // Do a final check that the repaired message is valid codeword.
+    // NOTE: I couldn't determine (or find a proof) that this is necessary.
+    //       I haven't been able to find a message which fails here.
+    if (!this.isValidCodeword(repaired)) {
+      throw new ReedSolomonException('Could not decode message.');
+    }
 
     return repaired;
   }

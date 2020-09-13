@@ -131,6 +131,7 @@ class AlgorithmDisplay {
       receivedPolyGood: document.getElementById('received-poly-good'),
       receivedPolyUnfixable: document.getElementById('received-poly-unfixable'),
       recoveredPoly: document.getElementById('recovered-poly'),
+      verifySyndromes: document.getElementById('verify-syndromes'),
       tooLong: document.getElementById('message-too-long'),
       nu: document.getElementById('nu'),
     };
@@ -316,6 +317,9 @@ class AlgorithmDisplay {
     }
 
     this._displayPolynomial(this._elements.recoveredPoly, recovered);
+
+    let verifySyndromes = rs.syndromes(recovered);
+    this._displayBytes(this._elements.verifySyndromes, verifySyndromes);
 
     let decoded = rs.removeCheckSymbols(recovered);
     this._displayPolynomial(this._elements.decodedPoly, decoded);

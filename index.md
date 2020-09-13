@@ -324,14 +324,22 @@ $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k} $$
 <!-- end:fix-errors -->
 
 > Calculate $$ s'(x) = r(x) - e(x) $$. If there weren't too many errors
-> then $$ s'(x) = s(x) $$, otherwise our message was too corrupted and we
-> couldn't tell!
+> then $$ s'(x) = s(x) $$, otherwise our message was too corrupted!
+>
+> We check that the syndromes of $$ s'(x) $$ are zero to verify that it is
+> indeed a valid codeword.
 
 <span>
 $$ s'(x) = r(x) - e(x) $$
 </span>
 
 <span class="polynomial" id="recovered-poly"></span>
+
+<span>
+$$ [s'(\alpha), s'(\alpha^2), \cdots, s'(\alpha^t)] $$
+</span>
+
+<span class="bytes" id="verify-syndromes"></span>
 
 > The message can be recovered by truncating the $$ t $$ check symbols
 > $$ p'(x) = \lfloor \frac{s'(x)}{x^t} \rfloor $$, then recast as a byte
