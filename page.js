@@ -293,6 +293,9 @@ class AlgorithmDisplay {
     let rs = this._configuration.getCodec();
 
     this._elements.receivedPolyUnfixable.style.display = 'none';
+    this._elements.receivedPolyGood.style.display = 'none';
+    setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', false);
+    setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', false);
 
     this._displayPolynomial(this._elements.polyRec, received);
 
@@ -308,9 +311,6 @@ class AlgorithmDisplay {
       // What we received was valid!
       recovered = received;
     } else {
-      setDisplayClass(this._fixErrorNodes, 'hide-fix-errors', false);
-      this._elements.receivedPolyGood.style.display = 'none';
-
       let errLoc = rs.errorLocator(syndromes);
       this._displayPolynomial(this._elements.errorLocator, errLoc);
       this._elements.nu.textContent = errLoc.length - 1;
@@ -326,8 +326,6 @@ class AlgorithmDisplay {
           this._elements.receivedPolyUnfixable, errPos, errLoc, received);
         MathJax.typeset(this._typesetElements);
         return;
-      } else {
-        setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', false);
       }
 
       let errorPolynomial = rs.errorPolynomial(syndromes, errLoc, errPos);
@@ -352,7 +350,31 @@ class AlgorithmDisplay {
   }
 }
 
-class Corrupter extends EventTarget {
+// Base class for classes that want to notify listerners of events.
+// Ideally we'd inherit from EventTarget, but Safari doesn't like that.
+class EventDispatcher {
+  constructor() {
+    // Map from type string to callback.
+    this._listeners = new Map();
+  }
+
+  dispatchEvent(e) {
+    for (const listener of (this._listeners.get(e.type) || [])) {
+      listener.call(this, e);
+    }
+  }
+
+  addEventListener(type, listener) {
+    let listeners = this._listeners.get(type);
+    if (listeners === undefined) {
+      listeners = [];
+      this._listeners.set(type, listeners);
+    }
+    listeners.push(listener);
+  }
+}
+
+class Corrupter extends EventDispatcher {
   constructor() {
     super();
 
@@ -462,7 +484,7 @@ class Corrupter extends EventTarget {
   }
 }
 
-class Configuration extends EventTarget {
+class Configuration extends EventDispatcher {
   constructor() {
     super();
     this._tElem = document.getElementById('t-input');

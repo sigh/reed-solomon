@@ -8,8 +8,8 @@
 
 {% include mathjax.html %}
 
-    <script src="{{ '/reed_solomon.js' | relative_url }}"></script>
-    <script src="{{ '/page.js' | relative_url }}"></script>
+    <script src="{{ '/reed_solomon.js?v=' | append: site.github.build_revision | relative_url }}" defer></script>
+    <script src="{{ '/page.js?v=' | append: site.github.build_revision | relative_url }}" defer></script>
     <script>
       window.addEventListener('load', () => { initPage(); });
     </script>

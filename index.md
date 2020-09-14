@@ -244,12 +244,10 @@ All $$ S_j\ = 0 $$, thus $$ e(x) = 0 $$.
 <!-- start:fix-errors -->
 
 > $$ S_1 \cdots S_t $$ define a set of equations where
-> $$ i_k $$ and $$ e_{i_k} $$ are unknown:
->>  $$
->>    S_j = e(\alpha^j)
->>        = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k}
->>        = \sum_{k=1}^{\nu} e_{i_k} X_k^j
->>  $$
+> $$ i_k $$ and $$ e_{i_k} $$ are unknown,
+> $$ S_j = e(\alpha^j) = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k} $$:
+>
+>> $$ S_j = e_{i_1}X_1^j + \cdots + e_{i_\nu}X_\nu^j $$ for $$ 1 \le j \le \nu $$
 >> where $$ X_k = \alpha^{i_k} $$
 >
 > Unfortunately, this set of equations is not linear (i.e. hard to solve) and
@@ -275,7 +273,7 @@ All $$ S_j\ = 0 $$, thus $$ e(x) = 0 $$.
 > used by the _PGZ decoder_.
 >
 > The [Berlekamp-Massey algorithm](https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm)
-> will more efficiently find both $$ \nu $$ and the solution.
+> will more efficiently find the solution.
 
 <div markdown=1>
 Error locator $$ \Lambda(x) = \prod_{k=1}^\nu (1 - x X_k ) $$
@@ -308,14 +306,14 @@ Number of errors $$ \nu $$
 
 <span id="nu"></span>
 
-> To find $$ e_{i_k} $$ we can solve the system of $$ \nu $$ linear equations
-> given by the definition of $$ S_j $$:
+> To find the error magnitudes $$ e_{i_k} $$ we can solve the system of
+> $$ \nu $$ linear equations given by the definition of $$ S_j $$:
 >
-> $$ S_j = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k} $$ for $$ 1 \le j \le \nu $$
+> $$ S_j = e_{i_1}X_1^j + \cdots + e_{i_\nu}X_\nu^j $$ for $$ 1 \le j \le \nu $$
 >
-> This can be computed efficiently with the
+> This can be computed more efficiently with the
 > [Forney algorithm](https://en.wikipedia.org/wiki/Forney_algorithm), which
-> uses a closed form solution for each $$ e_{i_k} $$.
+> provides a closed form solution for each $$ e_{i_k} $$.
 
 <span>
 $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k} $$

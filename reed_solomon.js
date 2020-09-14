@@ -311,15 +311,55 @@ class ReedSolomon {
 // So the constant term is at the end of the array.
 // e.g. [03, 04, 05] = 03x^2 + 04x + 05
 class GF2_8 {
-  // The number of elements in GF(2^8).
-  static SIZE = 256;
-  // The primitive polynomial: z^8+z^4+z^3+z^2+1.
-  // This is required to uniquely define our field representation. We use it
-  // here in the definition of EXP.
-  // This is the primitive used for Rijndael's (AES) finite field.
-  static PRIM = 0x11d;
-  // Order of the generator. i.e. the number of non-zero elements.
-  static ORDER = 255;
+  // Initialize static variables for this class.
+  // (We would ideally use the static keyword but Safari doesn't like that.)
+  static _initClass() {
+    // The number of elements in GF(2^8).
+    this.SIZE = 256;
+
+    // The primitive polynomial: z^8+z^4+z^3+z^2+1.
+    // This is required to uniquely define our field representation. We use it
+    // here in the definition of EXP.
+    // This is the primitive used for Rijndael's (AES) finite field.
+    this.PRIM = 0x11d;
+
+    // Order of the generator. i.e. the number of non-zero elements.
+    this.ORDER = 255;
+
+    // Calculate lookup tables.
+
+    // EXP[i] = α^i.
+    this.EXP = (() => {
+      let exp = new Uint8Array(this.SIZE);
+
+      // Calculate each successive power of α.
+      for (let i = 0, x = 0x01; i < this.SIZE; i++) {
+        exp[i] = x;
+        // x = x*α.
+        // This is polynomial multiplication where the coefficients are the bits.
+        // α = 0x02 = 0b10 = z. Multiplication by z is just shifting the
+        // coefficients, and hence the bit shift.
+        x <<= 1;
+        // If x gets too large, then it needs be mapped back into an element of
+        // the field. We mod out by PRIM, as PRIM has been chosen such that the
+        // powers of α will reach all the non-zero elements.
+        // (For example, if we just used 256 or 255, then the powers of α would
+        // go to 0 or just loop over the values we've already seen.)
+        if (x >= this.SIZE) x = this.sub(x, this.PRIM);
+      }
+
+      return exp;
+    })();
+
+    // LOG[α^i] = i. Inverse of EXP.
+    this.LOG = (() => {
+      let log = new Uint8Array(this.ORDER);
+      for (let i = 0; i < this.ORDER; i++) {
+        log[this.EXP[i]] = i;
+      }
+      return log;
+    })();
+  }
 
   // Addition and subtraction (the same operation in GF(2^8)).
   // Addition of polynomial is pairwise addition of the components. The
@@ -353,40 +393,6 @@ class GF2_8 {
     // α^(log_α(x) * j)
     return this.EXP[(this.LOG[p] * j)%this.ORDER];
   }
-
-  // Calculate lookup tables.
-
-  // EXP[i] = α^i.
-  static EXP = (() => {
-    let exp = new Uint8Array(this.ORDER);
-
-    // Calculate each successive power of α.
-    for (let i = 0, x = 0x01; i < this.ORDER; i++) {
-      exp[i] = x;
-      // x = x*α.
-      // This is polynomial multiplication where the coefficients are the bits.
-      // α = 0x02 = 0b10 = z. Multiplication by z is just shifting the
-      // coefficients, and hence the bits.
-      x <<= 1;
-      // If x gets too large, then it needs be mapped back into an element of
-      // the field. We mod out by PRIM, as PRIM has been chosen such that the
-      // powers of α will reach all the non-zero elements.
-      // (For example, if we just used 256 or 255, then the powers of α would
-      // go to 0 or just loop over the values we've already seen.)
-      if (x >= this.SIZE) x = this.sub(x, this.PRIM);
-    }
-
-    return exp;
-  })();
-
-  // LOG[α^i] = i. Inverse of EXP.
-  static LOG = (() => {
-    let log = new Uint8Array(this.SIZE);
-    for (let i = 0; i < this.SIZE; i++) {
-      log[this.EXP[i]] = i;
-    }
-    return log;
-  })();
 
   // Polynomial functions.
 
@@ -546,3 +552,4 @@ const runTests = () => {
   }
   console.log('All tests pass');
 };
+GF2_8._initClass();
