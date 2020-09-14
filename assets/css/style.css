@@ -60,13 +60,13 @@ input[type=number]{
 }
 
 blockquote,.notice {
-  margin-inline-start: 0px;
-  padding-inline-start: 10px;
+  padding: 2px 10px;
   border-radius: 5px;
 }
 
 blockquote {
   background-color: #ffffcc;
+  margin: 5px 0px;
 }
 
 .notice {

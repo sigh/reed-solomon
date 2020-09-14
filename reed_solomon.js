@@ -1,6 +1,10 @@
 // Implementation of a Reed-Solomon encoder/decoder which:
 //  - Encodes messages as polynomial coefficients (a BCH code).
 //  - Appends check symbols to the end of the message (a systematic code).
+/
+// When `t` check symbols are used, it can detect up to `t` errors and correct
+// up to `t/2` errors.
+// Handling erasures with known locations is not implemented.
 //
 // The implementation here aims to:
 //  - Be reasonably efficient (the interactive page must compute it in real-time).
@@ -13,10 +17,8 @@
 // Exception thrown if a message cannot be decoded.
 class ReedSolomonException extends Error {}
 
-// Reed-Solomon codec for a given number of check symbols.
-// When `t` check symbols are used, it can detect up to `t` errors and correct
-// up to `t/2` errors can be corrected.
-// Handling erasures with known locations is not implemented.
+// Reed-Solomon codec for a given number of check symbols `t`.
+// The original message kept intact as prefix of the generated codeword.
 class ReedSolomon {
   // Construct an encoder which adds `t` check symbols.
   constructor(t) {
@@ -254,8 +256,9 @@ class ReedSolomon {
     //     Λ' is the formal derivative of the errLoc Λ
     //
     // Original paper: Forney, G. (October 1965), "On Decoding BCH Codes"
-    // I couldn't access the paper, but see derivation at:
-    // https://web.archive.org/web/20140630172526/http://web.stanford.edu/class/ee387/handouts/notes7.pdf
+    // I couldn't access the paper, but see derivation at either of:
+    // * https://web.archive.org/web/20140630172526/http://web.stanford.edu/class/ee387/handouts/notes7.pdf
+    // * https://en.wikipedia.org/wiki/BCH_code#Explanation_of_Forney_algorithm_computation
 
     // Ω(x): the error evaluator
     let errEval = this.errorEvaluator(syndromes, errLoc);
@@ -482,7 +485,7 @@ class GF2_8 {
   }
 }
 
-// Some simple test cases to very that everything is not horribly broken.
+// Some simple test cases to verify that everything is not horribly broken.
 const runTests = () => {
   const goodCases = [
     {

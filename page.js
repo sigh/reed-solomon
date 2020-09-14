@@ -279,11 +279,11 @@ class AlgorithmDisplay {
     if (expectedNumErrors != errPos.length) {
       message = `
         \\( \\Lambda(x) \\) should have ${expectedNumErrors} distinct roots but
-        we found ${errPos.length}.`;
+        we only found ${errPos.length}.`;
     } else if (Math.max(...errPos) >= r.length) {
       message = `
-        To recover the message because we would need to add terms outside the
-        message. This could be because bytes were shifted.`;
+        One or more error positions are outside the message.
+        This could be because bytes were shifted.`;
     }
 
     elem.textContent = 'The message was not recovered: ' + message;
