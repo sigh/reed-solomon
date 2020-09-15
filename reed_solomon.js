@@ -394,7 +394,7 @@ class GF2_8 {
 
   static pow(x, j) {
     // α^(log_α(x) * j)
-    return this.EXP[(this.LOG[p] * j)%this.ORDER];
+    return this.EXP[(this.LOG[x] * j)%this.ORDER];
   }
 
   // Polynomial functions.

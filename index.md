@@ -17,7 +17,7 @@ title: Reed-Solomon Error Correction
 
   > Reed-Solomon codes are a family of error correction codes which encode a
   > message of length $$ k $$ into a codeword of length $$ n $$ using
-  > $$ t = n + k $$ redundant symbols (here, a symbol will just be a byte).
+  > $$ t = n - k $$ redundant symbols (here, a symbol will just be a byte).
   > They can:
   >
   > - Detect up to $$ t $$ errors (altered symbols).
@@ -45,7 +45,7 @@ title: Reed-Solomon Error Correction
   > [BCH](https://en.wikipedia.org/wiki/BCH_code) variant, which constructs the
   > codeword directly with the polynomial coefficients. Redundancy is
   > introduced by constructing the codeword such that $$ t $$ roots of the
-  > polynomial are fixed/known. Decoding is conceptually trickier, but can
+  > polynomial are fixed. Decoding is conceptually trickier, but can
   > be implemented efficiently as described below.
 
 </div>
@@ -57,13 +57,14 @@ title: Reed-Solomon Error Correction
   > The encoder and decoder need to agree on all configuration parameters.
 
   > The amount of redundancy $$ t $$ must be specified when encoding a message.
-  > $$ n = t + k $$ must be less than 256  (the number of elements in our
-  > field).
 
   <label for="t-input">Number of check symbols $$ t = $$</label>
   <input type="number" id="t-input" value="5" min=1 max=255>
   <label for="k-input">Fix message size (optional) $$ k = $$</label>
-  <input type="number" id="k-input" value="" min=0 max=255>
+  <input type="number" id="k-input" value="" min=0 max=255>  
+  <span class="clarification">
+    $$ n = t + k $$ must be less than 256.
+  </span>
 
   > The general idea behind a Reed-Solomon code would work using real numbers
   > as the symbols. However, computers cannot store infinitely precise real
@@ -73,8 +74,8 @@ title: Reed-Solomon Error Correction
   > The relevant part to understand about finite fields is that they follow
   > the same rules of arithmetic as real numbers.
   >
-  > We use $$ {\rm GF}(2^8) $$ as its 256 elements map nicely to bytes.
-  > Elements in $$ {\rm GF}(2^8) $$ will be displayed in hexidecimal to keep
+  > We use $$ {\rm GF}(2^8) $$ because its 256 elements map nicely to bytes.
+  > Elements in $$ {\rm GF}(2^8) $$ will be displayed in hexadecimal to keep
   > them distinct from normal integers.
 
   Field: $$ {\rm GF}(2^8) $$
@@ -86,13 +87,13 @@ title: Reed-Solomon Error Correction
   > > Specifically, we define $$ {\rm GF}(2^8) = {\rm GF}(2)[z]/(z^8+z^4+z^3+z^2+1) $$.
 
   Primitive polynomial:
-  $$ z^8+z^4+z^3+z^2+1 = \texttt{11d} $$
+  $$ z^8+z^4+z^3+z^2+1 = \texttt{11D} $$
 
-  > We will define a codeword $$ c(x) $$ as valid if it is divisible
+  > Define a codeword $$ c(x) $$ as valid if it is divisible
   > by a generator polynomial $$ g(x) $$. i.e.
   > $$ c(x) = 0 \pmod{g(x)} $$.
   >
-  > Since we want $$ t $$ degrees of redundancy, we construct a $$ g(x) $$ with
+  > To have $$ t $$ degrees of redundancy, construct a $$ g(x) $$ with
   > $$ t $$ roots. To choose these roots, we must use a
   > [_generator element_](https://en.wikipedia.org/wiki/Primitive_element_(finite_field))
   > $$ \alpha \in {\rm GF}(2^8) $$ ---
@@ -120,7 +121,8 @@ Message $$ m $$
 Message was truncated because it is too long.
 </div>
 
-Bytes $$ [a_k, \cdots, a_1] = \text{utf8}(m) $$
+Bytes (hex)
+$$ [a_k, \cdots, a_1] = \text{utf8}(m) $$
 
 <span class="bytes" id="message-utf8"></span>
 
@@ -155,31 +157,31 @@ $$ p(x) = \sum_{j=1}^k a_j x^{j-1} $$
 >> $$ p(x) \cdot x^t $$
 >>
 >> Find the remainder after dividing by $$ g(x) $$:
->> $$ s_r(x) = p(x) \cdot x^t \pmod{g(x)} $$  
+>> $$ s_r(x) = p(x) \cdot x^t \mod g(x) $$  
 >> Either
 >> [polynomial long-division](https://en.wikipedia.org/wiki/Polynomial_long_division)
 >> or [synthetic division](https://en.wikipedia.org/wiki/Synthetic_division)
 >> will give the remainder.
->
-> Now $$ s(x) = p(x) \cdot x^t - s_r(x) $$ is divisible by $$ g(x) $$ and thus
-> is a valid codeword.
 
 <span>
 $$ s_r(x) = p(x) \cdot x^t $$
-$$ \pmod{g(x)} $$
+$$ \mod g(x) $$
 </span>
 
 <span class="polynomial" id="check-poly"></span>
+
+> Now $$ s(x) = p(x) \cdot x^t - s_r(x) $$ is divisible by $$ g(x) $$ and thus
+> is a valid codeword.
+>
+> Note: In $$ {\rm GF}(2^8) $$ addition is the same as subtraction (in the
+> byte representation it is an `xor` of the symbols).
+> Thus $$ s_r(x) $$ is unaltered as a suffix of $$ s(x) $$.
 
 <span>
 $$ s(x) = p(x) \cdot x^t - s_r(x) $$
 </span>
 
 <span class="polynomial" id="encoded-poly"></span>  
-<span class="clarification">
-Subtraction is the same as addition in $$ {\rm GF}(2^8) $$ so $$ s_r(x) $$
-is unaltered as a suffix of $$ s(x) $$.
-</span>
 
 <!-- end:intermediate-results -->
 
@@ -238,7 +240,7 @@ where $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k} $$
 > For a valid codeword $$ c(x) $$, we know that all the roots of $$ g(x) $$
 > must also be roots of $$ c(x) $$.
 >
-> Define a _syndrome_ as $$ r(x) $$ evaluated at a root of $$ g(x) $$. We have
+> Define a _syndrome_ as $$ r(x) $$ evaluated at a root of $$ g(x) $$. There are
 > $$ t $$ syndromes:
 >
 >> $$ S_j = r(\alpha^j) $$ for $$ 1 \le j \le t $$
@@ -248,6 +250,14 @@ where $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k} $$
 >  * $$ S_j = s(\alpha^j) + e(\alpha^j) = 0 + e(\alpha^j) = e(\alpha^j) $$
 >  * Each syndrome depends _only_ on the error $$ e(x) $$
 >  * If there are no errors then all syndromes are zero
+>
+> Note: When evaluating $$ r(x) $$, terms $$ x^{255} $$ and greater are
+> indistinguishable from smaller terms because $$ x^k = x^{k+255} $$ in
+> $$ {\rm GF}(2^8) $$.
+> Thus we must limit our codewords to 255 bytes to be able to detect and correct
+> errors.
+> More generally, the codewords lengths must be less than the number of
+> elements in the field.
 
 Syndromes $$ S_j = r(\alpha^j) = e(\alpha^j) $$
 
@@ -273,7 +283,7 @@ it if there were over $$ t/2 $$ errors.
 
 > $$ S_1 \cdots S_t $$ define a set of equations where
 > $$ i_k $$ and $$ e_{i_k} $$ are unknown,
-> $$ S_j = e(\alpha^j) = \sum_{k=1}^\nu e_{i_k} (\alpha^j)^{i_k} $$:
+> $$ S_j = e(\alpha^j) = \sum_{k=1}^\nu e_{i_k} X_k^j $$:
 >
 >> $$ S_j = e_{i_1}X_1^j + \cdots + e_{i_\nu}X_\nu^j $$ for $$ 1 \le j \le \nu $$
 >> where $$ X_k = \alpha^{i_k} $$
@@ -282,8 +292,8 @@ it if there were over $$ t/2 $$ errors.
 > we don't even know *how many* unknowns there are.
 > We want to convert this to a set of linear equations:
 >
->> Define the _error locator_ $$ \Lambda(x) $$ as a polynomial which has a
->> a root for each error:
+>> Define the _error locator_ $$ \Lambda(x) $$ as a polynomial with roots
+>> $$ X_k^{-1} $$ (i.e. a root per error):
 >>
 >>> $$ \Lambda(x) = \prod_{k=1}^\nu (1 - x X_k ) = 1 + \Lambda_1 x^1 + \Lambda_2 x^2 + \cdots + \Lambda_\nu x^\nu $$
 >>
@@ -323,8 +333,8 @@ where $$ X_{k} = \alpha^{i_k} $$
 > [Chien search](https://en.wikipedia.org/wiki/Chien_search)
 > is an efficient way to implement the evaluations.
 >
-> Note: if we don't find $$ \nu $$ different roots of $$ \Lambda(x) $$ or
-> if the positions are outside the message, then the message has over
+> Note: If we don't find $$ \nu $$ different roots of $$ \Lambda(x) $$ or
+> if the positions are outside the message, then there were over
 > $$ t/2 $$ errors and we can't recover.
 
 Error positions $$ i_k $$
