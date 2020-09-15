@@ -33,7 +33,7 @@ class ReedSolomon {
     // Pad the end of msg to make room for the check symbols.
     // pShifted = msg(x)*x^t
     let pShifted = new Uint8Array(p.length + this._t);
-    pShifted.set(msg);
+    pShifted.set(p);
 
     // pShifted(x)*x^t = _(x)*g(x) + sR(x);
     let [_, sR] = GF2_8.polyDiv(pShifted, this._generatorPolynomial);
@@ -333,10 +333,12 @@ class GF2_8 {
 
     // EXP[i] = α^i.
     this.EXP = (() => {
-      let exp = new Uint8Array(this.SIZE);
+      // Make the lookup table double the length so that mul and div don't need
+      // to handle overflows.
+      let exp = new Uint8Array(this.ORDER*2);
 
       // Calculate each successive power of α.
-      for (let i = 0, x = 0x01; i < this.SIZE; i++) {
+      for (let i = 0, x = 0x01; i < this.ORDER; i++) {
         exp[i] = x;
         // x = x*α.
         // This is polynomial multiplication where the coefficients are the bits.
@@ -350,13 +352,16 @@ class GF2_8 {
         // go to 0 or just loop over the values we've already seen.)
         if (x >= this.SIZE) x = this.sub(x, this.PRIM);
       }
+      // Append a second copy to the end.
+      exp.copyWithin(255, 0);
 
       return exp;
     })();
 
     // LOG[α^i] = i. Inverse of EXP.
     this.LOG = (() => {
-      let log = new Uint8Array(this.ORDER);
+      let log = new Uint8Array(this.SIZE);
+      // The logs start repeating after this.ORDER.
       for (let i = 0; i < this.ORDER; i++) {
         log[this.EXP[i]] = i;
       }
@@ -383,13 +388,13 @@ class GF2_8 {
   static mul(x, y) {
     if (x === 0x00 || y === 0x00) return 0x00;
     // α^(log_α(x) + log_α(y))
-    return this.EXP[(this.LOG[x] + this.LOG[y])%this.ORDER];
+    return this.EXP[this.LOG[x] + this.LOG[y]];
   }
 
   static div(x, y) {
     if (x === 0x00) return 0x00;
     // α^(log_α(x) - log_α(y))
-    return this.EXP[(this.LOG[x] + this.ORDER - this.LOG[y])%this.ORDER];
+    return this.EXP[this.LOG[x] + this.ORDER - this.LOG[y]];
   }
 
   static pow(x, j) {
@@ -401,7 +406,7 @@ class GF2_8 {
 
   // Evaluate p(x)
   static polyEval(p, x) {
-    let y = p[0x00];
+    let y = p[0];
     for (let i = 1; i < p.length; i++) {
       y = this.add(this.mul(y, x), p[i]);
     }
@@ -490,6 +495,10 @@ const runTests = () => {
   const goodCases = [
     {
       input: "",
+      corruption: {},
+    },
+    {
+      input: " ",
       corruption: {},
     },
     {

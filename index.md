@@ -272,8 +272,8 @@ All syndromes are zero, thus $$ e(x) = 0 $$.
 <!-- start:fix-errors -->
 
 <div class="notice error-notice " id="received-poly-error" markdown=1>
-The message was corrupted: $$ r(x) $$ is not a valid codeword since the
-syndromes are non-zero.
+The message was corrupted: $$ r(x) $$ is not a valid codeword because there was
+at least one non-zero syndrome.
 
 If we stop here, then we can be certain of having caught all corruptions with up
 to $$ t $$ errors.
