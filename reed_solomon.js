@@ -1,7 +1,7 @@
 // Implementation of a Reed-Solomon encoder/decoder which:
 //  - Encodes messages as polynomial coefficients (a BCH code).
 //  - Appends check symbols to the end of the message (a systematic code).
-/
+//
 // When `t` check symbols are used, it can detect up to `t` errors and correct
 // up to `t/2` errors.
 // Handling erasures with known locations is not implemented.
