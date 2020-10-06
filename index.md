@@ -37,20 +37,20 @@ title: Reed-Solomon Error Correction
   > [polynomial interpolation](https://en.wikipedia.org/wiki/Polynomial_interpolation)
   > can be used to recover the message.
   > Handling unknown error locations is harder, and the original paper offers
-  > the very inefficient method by choosing the most popular out of all
+  > the very inefficient method of choosing the most popular out of all
   > $$ n \choose k $$ decodings (more efficient algorithms have since been
   > developed).
   >
   > Instead, here we implement the more common
   > [BCH](https://en.wikipedia.org/wiki/BCH_code) variant, which constructs the
-  > codeword directly with the polynomial coefficients. Redundancy is
+  > codeword directly from the polynomial coefficients. Redundancy is
   > introduced by constructing the codeword such that $$ t $$ roots of the
   > polynomial are fixed. Decoding is conceptually trickier, but can
   > be implemented efficiently as described below.
 
 </div>
 
-## Configuration
+## Codec Configuration
 
 <div id="configuration" markdown=1>
 
@@ -89,7 +89,7 @@ title: Reed-Solomon Error Correction
   Primitive polynomial:
   $$ z^8+z^4+z^3+z^2+1 = \texttt{11D} $$
 
-  > Define a codeword $$ c(x) $$ as valid if it is divisible
+  > Define a codeword polynomial $$ c(x) $$ as valid if it is divisible
   > by a generator polynomial $$ g(x) $$. i.e.
   > $$ c(x) = 0 \pmod{g(x)} $$.
   >
@@ -281,7 +281,7 @@ However, we are going to try to repair the error, and we may incorrectly repair
 it if there were over $$ t/2 $$ errors.
 </div>
 
-> $$ S_1 \cdots S_t $$ define a set of equations where
+> The syndromes $$ S_1 \cdots S_t $$ define a set of equations where
 > $$ i_k $$ and $$ e_{i_k} $$ are unknown,
 > $$ S_j = e(\alpha^j) = \sum_{k=1}^\nu e_{i_k} X_k^j $$:
 >
@@ -293,7 +293,7 @@ it if there were over $$ t/2 $$ errors.
 > We want to convert this to a set of linear equations:
 >
 >> Define the _error locator_ $$ \Lambda(x) $$ as a polynomial with roots
->> $$ X_k^{-1} $$ (i.e. a root per error):
+>> $$ X_k^{-1} $$ (i.e. one root per error):
 >>
 >>> $$ \Lambda(x) = \prod_{k=1}^\nu (1 - x X_k ) = 1 + \Lambda_1 x^1 + \Lambda_2 x^2 + \cdots + \Lambda_\nu x^\nu $$
 >>
@@ -385,8 +385,8 @@ $$ [s'(\alpha), s'(\alpha^2), \cdots, s'(\alpha^t)] $$
 
 <span class="bytes" id="verify-syndromes"></span>
 
-> Recover the message bytes by truncating the $$ t $$ check symbols
-> $$ p'(x) = \lfloor \frac{s'(x)}{x^t} \rfloor $$, then recasting the
+> Recover the message bytes by truncating the $$ t $$ check symbols:
+> $$ p'(x) = \lfloor \frac{s'(x)}{x^t} \rfloor $$ --- then recasting the
 > result as a byte string.
 
 $$ p'(x) = \lfloor \frac{s'(x)}{x^t} \rfloor $$
