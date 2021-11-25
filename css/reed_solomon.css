@@ -11,10 +11,6 @@ body {
   margin: 1em 0px;
 }
 
-.container {
-  margin: 0 auto;
-}
-
 #main_content {
   display: inline-grid;
   grid-template-columns: 140px 1fr;
@@ -43,7 +39,7 @@ p, #main_content > * {
   margin-left: -4px;
 }
 .corrupted-byte {
-  background: #faa;
+  background: #700;
 }
 .bad-input {
   background: inherit;
@@ -67,12 +63,16 @@ blockquote,.notice {
 }
 
 blockquote {
-  background-color: #ffffcc;
+  background-color: #034;
   margin: 5px 0px;
 }
 
+blockquote {
+  border-left: 0;
+}
+
 .notice {
-  background-color: lightgreen;
+  background-color: #090;
 }
 
 h2,#configuration,blockquote,#overview,.notice {
@@ -91,12 +91,12 @@ blockquote blockquote {
 }
 
 .clarification {
-  color: #777;
+  color: #999;
   padding-left: 10px;
 }
 
 #decoded-message {
-  background-color: lightgreen;
+  background-color: #090;
   padding: 2px 5px;
   border-radius: 2px;
 }
@@ -106,7 +106,7 @@ blockquote blockquote {
 }
 
 .error-notice {
-  background-color: #ffd2d2;
+  background-color: #700;
 }
 
 #reset-corrupter {
@@ -115,4 +115,12 @@ blockquote blockquote {
 
 input:invalid {
   background: #faa;
+}
+
+code {
+  margin: 0;
+  padding: 0;
+}
+var {
+  font-style: italic;
 }
