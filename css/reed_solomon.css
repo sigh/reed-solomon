@@ -7,55 +7,86 @@ body {
   font-size: medium;
   font-family: serif;
 }
-#overview p, blockquote p {
+
+#overview p,
+blockquote p {
   margin: 1em 0px;
 }
 
 #main_content {
   display: inline-grid;
   grid-template-columns: 140px 1fr;
-  overflow:auto;
+  overflow: auto;
   align-items: top;
 }
 
-p, #main_content > * {
+p,
+#main_content>* {
   margin: 5px 0px;
 }
+
 #main_content mjx-container {
   margin: 0px;
 }
 
 .bytes {
   font-family: monospace;
+  background-color: #2a2a2a;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #e0e0e0;
 }
 
 #message-input {
   max-width: 460px;
   width: 90%;
+  background-color: #ffffff;
+  border: 2px inset #cccccc;
+  color: #000000;
+  padding: 4px 6px;
+  border-radius: 3px;
 }
 
 #corrupter {
   font-size: small;
   margin-left: -4px;
+  background-color: #ffffff;
+  border: 2px inset #cccccc;
+  color: #000000;
+  padding: 4px 6px;
+  border-radius: 3px;
 }
+
 .corrupted-byte {
-  background: #700;
+  background: #b85450;
+  color: #ffffff;
 }
+
 .bad-input {
   background: inherit;
   animation-name: bad-input-animation;
   animation-duration: 0.2s;
 }
+
 @keyframes bad-input-animation {
-  from {background: #faa;}
+  from {
+    background: #ff9999;
+  }
+
   to {}
 }
 
-input[type=number]{
+input[type=number] {
   width: 4em;
+  background-color: #ffffff;
+  border: 2px inset #cccccc;
+  color: #000000;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 
-blockquote,.notice {
+blockquote,
+.notice {
   padding: 2px 10px;
   border-radius: 5px;
   font-size: medium;
@@ -63,19 +94,22 @@ blockquote,.notice {
 }
 
 blockquote {
-  background-color: #034;
+  background-color: #1a3d4a;
+  border-left: 3px solid #4a9eff;
   margin: 5px 0px;
 }
 
-blockquote {
-  border-left: 0;
-}
-
 .notice {
-  background-color: #090;
+  background-color: #1a4d1a;
+  border-left: 3px solid #4db84d;
+  color: #e8f5e8;
 }
 
-h2,#configuration,blockquote,#overview,.notice {
+h2,
+#configuration,
+blockquote,
+#overview,
+.notice {
   grid-column: 1 / span 2;
   width: 90vw;
   max-width: 600px;
@@ -88,39 +122,67 @@ blockquote blockquote {
 .polynomial {
   font-family: serif;
   white-space: nowrap;
+  background-color: #2a2a2a;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #e0e0e0;
 }
 
 .clarification {
-  color: #999;
+  color: #b3b3b3;
   padding-left: 10px;
 }
 
 #decoded-message {
-  background-color: #090;
+  background-color: #1a4d1a;
+  border: 1px solid #4db84d;
+  color: #e8f5e8;
   padding: 2px 5px;
   border-radius: 2px;
 }
 
-.hide-intermediate, .hide-explanation, .hide-fix-errors, .hide-fixable-message {
+.hide-intermediate,
+.hide-explanation,
+.hide-fix-errors,
+.hide-fixable-message {
   display: none;
 }
 
 .error-notice {
-  background-color: #700;
+  background-color: #4d1a1a;
+  border-left: 3px solid #e65c5c;
+  color: #f5e8e8;
 }
 
 #reset-corrupter {
-  padding: 0px 5px;
+  padding: 6px 12px;
+  background-color: #e8e8e8;
+  border: 1px solid #aaaaaa;
+  color: #333333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#reset-corrupter:hover {
+  background-color: #d8d8d8;
+  border-color: #999999;
+}
+
+#reset-corrupter:active {
+  background-color: #cccccc;
 }
 
 input:invalid {
-  background: #faa;
+  background: #ff9999;
+  border: 1px solid #e65c5c;
 }
 
 code {
   margin: 0;
   padding: 0;
 }
+
 var {
   font-style: italic;
 }
