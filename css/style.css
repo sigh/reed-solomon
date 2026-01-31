@@ -135,13 +135,13 @@ table {
   --font-mono: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, monospace;
 
   /* Text colors */
-  --color-text-primary: #f0e7d5;
-  --color-text-secondary: #b6b6b6;
-  --color-text-heading: #e8e8e8;
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #a0a0a0;
+  --color-text-heading: #f0f0f0;
 
   /* Inline data display (bytes, polynomials, code-like spans) */
-  --color-inline-data-bg: #2a2a2a;
-  --color-inline-data-text: #e0e0e0;
+  --color-inline-data-bg: #1e1e1e;
+  --color-inline-data-text: #d0d0d0;
 
   /* Interactive transitions */
   --transition-fast: 0.15s ease;
@@ -192,6 +192,8 @@ h1 {
 
 h2 {
   font-size: 24px;
+  padding-top: 1em;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 h4,
@@ -212,6 +214,7 @@ a {
   color: #ffcc00;
   font-weight: 400;
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 a:hover {
@@ -296,7 +299,8 @@ td {
 hr {
   border: 0;
   height: 1px;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, .75), rgba(255, 255, 255, 0));
+  background: rgba(255, 255, 255, 0.15);
+  margin: 2em 0;
 }
 
 dt {

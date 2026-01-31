@@ -10,7 +10,7 @@ body {
 
 #overview p,
 blockquote p {
-  margin: 1em 0px;
+  margin: 0.5em 0px;
 }
 
 #main_content {
@@ -45,6 +45,15 @@ input[type="number"],
   border: 1px solid #888888;
   color: #000000;
   border-radius: 3px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+#corrupter:focus {
+  outline: none;
+  border-color: #ffcc00;
+  box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.2);
 }
 
 #message-input {
@@ -86,7 +95,6 @@ input[type="number"] {
 blockquote,
 .notice {
   padding: 2px 10px;
-  border-radius: 5px;
   font-size: medium;
   font-family: serif;
 }
