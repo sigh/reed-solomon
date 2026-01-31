@@ -31,30 +31,32 @@ p,
 
 .bytes {
   font-family: monospace;
-  background-color: #2a2a2a;
+  background-color: var(--color-inline-data-bg);
   padding: 2px 4px;
   border-radius: 3px;
-  color: #e0e0e0;
+  color: var(--color-inline-data-text);
+}
+
+/* Base styling for text-like inputs */
+input[type="text"],
+input[type="number"],
+#corrupter {
+  background-color: #ffffff;
+  border: 1px solid #888888;
+  color: #000000;
+  border-radius: 3px;
 }
 
 #message-input {
   max-width: 460px;
   width: 90%;
-  background-color: #ffffff;
-  border: 2px inset #cccccc;
-  color: #000000;
   padding: 4px 6px;
-  border-radius: 3px;
 }
 
 #corrupter {
   font-size: small;
   margin-left: -4px;
-  background-color: #ffffff;
-  border: 2px inset #cccccc;
-  color: #000000;
   padding: 4px 6px;
-  border-radius: 3px;
 }
 
 .corrupted-byte {
@@ -76,13 +78,9 @@ p,
   to {}
 }
 
-input[type=number] {
+input[type="number"] {
   width: 4em;
-  background-color: #ffffff;
-  border: 2px inset #cccccc;
-  color: #000000;
   padding: 2px 4px;
-  border-radius: 3px;
 }
 
 blockquote,
@@ -122,14 +120,14 @@ blockquote blockquote {
 .polynomial {
   font-family: serif;
   white-space: nowrap;
-  background-color: #2a2a2a;
+  background-color: var(--color-inline-data-bg);
   padding: 2px 4px;
   border-radius: 3px;
-  color: #e0e0e0;
+  color: var(--color-inline-data-text);
 }
 
 .clarification {
-  color: #b3b3b3;
+  color: var(--color-text-secondary);
   padding-left: 10px;
 }
 

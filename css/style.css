@@ -126,11 +126,32 @@ table {
 
 /* From: https://github.com/pages-themes/midnight/blob/master/_sass/jekyll-theme-midnight.scss */
 
+:root {
+  /* Font stacks */
+  --font-body: 'OpenSansRegular', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: 'OpenSansLight', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-emphasis: 'OpenSansBold', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-label: 'OpenSansSemibold', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, monospace;
+
+  /* Text colors */
+  --color-text-primary: #f0e7d5;
+  --color-text-secondary: #b6b6b6;
+  --color-text-heading: #e8e8e8;
+
+  /* Inline data display (bytes, polynomials, code-like spans) */
+  --color-inline-data-bg: #2a2a2a;
+  --color-inline-data-text: #e0e0e0;
+
+  /* Interactive transitions */
+  --transition-fast: 0.15s ease;
+}
+
 body {
   padding: 0px 0 20px 0px;
   margin: 0px;
-  font: 14px/1.5 "OpenSansRegular", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color: #f0e7d5;
+  font: 14px/1.5 var(--font-body);
+  color: var(--color-text-primary);
   font-weight: normal;
   background: #252525;
   background-attachment: fixed !important;
@@ -143,9 +164,9 @@ h3,
 h4,
 h5,
 h6 {
-  color: #e8e8e8;
+  color: var(--color-text-heading);
   margin: 0 0 10px;
-  font-family: 'OpenSansRegular', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   font-weight: normal;
 }
 
@@ -176,15 +197,15 @@ h2 {
 h4,
 h5,
 h6 {
-  color: #e8e8e8;
+  color: var(--color-text-heading);
 }
 
 h3 {
   font-size: 18px;
   line-height: 24px;
-  font-family: 'OpenSansRegular', "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-family: var(--font-body) !important;
   font-weight: normal;
-  color: #b6b6b6;
+  color: var(--color-text-secondary);
 }
 
 a {
@@ -205,7 +226,7 @@ a small {
 }
 
 strong {
-  font-family: 'OpenSansBold', "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-family: var(--font-emphasis) !important;
   font-weight: normal;
 }
 
@@ -227,7 +248,7 @@ blockquote {
 }
 
 code {
-  font-family: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, monospace;
+  font-family: var(--font-mono);
   color: #efefef;
   font-size: 13px;
   margin: 0 4px;
@@ -261,8 +282,8 @@ th {
   text-align: left;
   padding: 5px 10px;
   border-bottom: 1px solid #434343;
-  color: #b6b6b6;
-  font-family: 'OpenSansSemibold', "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  color: var(--color-text-secondary);
+  font-family: var(--font-label) !important;
   font-weight: normal;
 }
 
@@ -280,7 +301,7 @@ hr {
 
 dt {
   color: #F0E7D5;
-  font-family: 'OpenSansSemibold', "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-family: var(--font-label) !important;
   font-weight: normal;
 }
 
@@ -297,7 +318,7 @@ section {
 }
 
 #title h1 {
-  font-family: 'OpenSansLight', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-display);
   font-weight: normal;
   font-size: 40px;
   text-align: center;
@@ -306,7 +327,7 @@ section {
 
 #title p {
   color: #d7cfbe;
-  font-family: 'OpenSansLight', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-display);
   font-weight: normal;
   font-size: 18px;
   text-align: center;

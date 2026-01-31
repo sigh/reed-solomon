@@ -61,7 +61,7 @@ title: Reed-Solomon Error Correction
   <label for="t-input">Number of check symbols $$ t = $$</label>
   <input type="number" id="t-input" value="5" min=1 max=255>
   <label for="k-input">Fix message size (optional) $$ k = $$</label>
-  <input type="number" id="k-input" value="" min=0 max=255>  
+  <input type="number" id="k-input" value="" min=0 max=255>
   <span class="clarification">
     $$ n = t + k $$ must be less than 256.
   </span>
@@ -157,7 +157,7 @@ $$ p(x) = \sum_{j=1}^k a_j x^{j-1} $$
 >> $$ p(x) \cdot x^t $$
 >>
 >> Find the remainder after dividing by $$ g(x) $$:
->> $$ s_r(x) = p(x) \cdot x^t \mod g(x) $$  
+>> $$ s_r(x) = p(x) \cdot x^t \mod g(x) $$
 >> Either
 >> [polynomial long-division](https://en.wikipedia.org/wiki/Polynomial_long_division)
 >> or [synthetic division](https://en.wikipedia.org/wiki/Synthetic_division)
@@ -181,7 +181,7 @@ $$ \mod g(x) $$
 $$ s(x) = p(x) \cdot x^t - s_r(x) $$
 </span>
 
-<span class="polynomial" id="encoded-poly"></span>  
+<span class="polynomial" id="encoded-poly"></span>
 
 <!-- end:intermediate-results -->
 
@@ -190,7 +190,6 @@ $$ s(x) = p(x) \cdot x^t - s_r(x) $$
 Encoded
 
 <span class="bytes" id="message-encoded"></span>
-
 
 Corrupter
 <input type="button" id="reset-corrupter" value="Reset">
@@ -220,9 +219,9 @@ Received
 >
 > To be able to reason about the errors, define a few more variables:
 >
->  * $$ \nu $$ is the (unknown) number of errors
->  * $$ i_k $$ is the position of the errors for $$ 1 \le k \le \nu $$
->  * $$ e_{i_k} $$ is the magnitude of the error at $$ i_k $$
+> - $$ \nu $$ is the (unknown) number of errors
+> - $$ i_k $$ is the position of the errors for $$ 1 \le k \le \nu $$
+> - $$ e_{i_k} $$ is the magnitude of the error at $$ i_k $$
 >
 > Thus $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k}
 >              = e_{i_1} x^{i_1} + \cdots + e_{i_\nu} x^{i_\nu} $$
@@ -247,9 +246,9 @@ where $$ e(x) = \sum_{k=1}^\nu e_{i_k} x^{i_k} $$
 >
 > Syndromes have several useful properties:
 >
->  * $$ S_j = s(\alpha^j) + e(\alpha^j) = 0 + e(\alpha^j) = e(\alpha^j) $$
->  * Each syndrome depends _only_ on the error $$ e(x) $$
->  * If there are no errors then all syndromes are zero
+> - $$ S_j = s(\alpha^j) + e(\alpha^j) = 0 + e(\alpha^j) = e(\alpha^j) $$
+> - Each syndrome depends _only_ on the error $$ e(x) $$
+> - If there are no errors then all syndromes are zero
 >
 > Note: When evaluating $$ r(x) $$, terms $$ x^{255} $$ and greater are
 > indistinguishable from smaller terms because $$ x^k = x^{k+255} $$ in
@@ -289,7 +288,7 @@ it if there were over $$ t/2 $$ errors.
 >> where $$ X_k = \alpha^{i_k} $$
 >
 > Unfortunately, this set of equations is not linear (i.e. hard to solve) and
-> we don't even know *how many* unknowns there are.
+> we don't even know _how many_ unknowns there are.
 > We want to convert this to a set of linear equations:
 >
 >> Define the _error locator_ $$ \Lambda(x) $$ as a polynomial with roots
