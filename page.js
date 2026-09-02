@@ -225,7 +225,7 @@ class AlgorithmDisplay {
       ['i_k = \\log_{\\alpha}(\\alpha^{i_k})'],
     ];
     for (const ik of errPos) {
-      let xk = GF2_8.LOG[ik];
+      let xk = GF2_8.EXP[ik];
       table[0].push(toTexHexString(GF2_8.div(1, xk)));
       table[1].push(toTexHexString(0));
       table[2].push(toTexHexString(xk));
