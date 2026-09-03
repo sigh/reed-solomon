@@ -217,7 +217,7 @@ class AlgorithmDisplay {
     return table;
   }
 
-  _errPosTable(errPos) {
+  _errPosTable(errPos, errLoc) {
     let table = [
       ['X_k^{-1}'],
       ['\\Lambda(X_{k}^{-1})'],
@@ -226,8 +226,9 @@ class AlgorithmDisplay {
     ];
     for (const ik of errPos) {
       let xk = GF2_8.EXP[ik];
-      table[0].push(toTexHexString(GF2_8.div(1, xk)));
-      table[1].push(toTexHexString(0));
+      let xkInv = GF2_8.div(1, xk);
+      table[0].push(toTexHexString(xkInv));
+      table[1].push(toTexHexString(GF2_8.polyEval(errLoc, xkInv)));
       table[2].push(toTexHexString(xk));
       table[3].push(ik);
     }
@@ -317,7 +318,7 @@ class AlgorithmDisplay {
 
       let errPos = rs.errorPositions(errLoc);
       this._displayTexTable(
-        this._elements.positions, this._errPosTable(errPos));
+        this._elements.positions, this._errPosTable(errPos, errLoc));
 
       if (!rs.errorPositionsValid(errPos, errLoc, received)) {
         setDisplayClass(this._fixableMessageNodes, 'hide-fixable-message', true);
